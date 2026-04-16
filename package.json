@@ -1,0 +1,306 @@
+{
+  "name": "pyramid-sort",
+  "displayName": "Pyramid Sort",
+  "description": "Sort your imports, attributes, types, objects & CSS by line length — short lines on top, long lines on the bottom. Clean pyramid-shaped code.",
+  "version": "0.2.0",
+  "publisher": "INVEON-Development",
+  "license": "MIT",
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#1a1a2e",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/racha/pyramid-sort"
+  },
+  "bugs": {
+    "url": "https://github.com/racha/pyramid-sort/issues"
+  },
+  "homepage": "https://github.com/racha/pyramid-sort#readme",
+  "categories": [
+    "Formatters",
+    "Other"
+  ],
+  "keywords": [
+    "sort",
+    "imports",
+    "attributes",
+    "jsx",
+    "tsx",
+    "pyramid",
+    "length",
+    "formatter",
+    "organize"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "main": "./dist/extension.js",
+  "bin": {
+    "pyramid-sort": "./dist/cli.js"
+  },
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact",
+    "onLanguage:vue",
+    "onLanguage:svelte",
+    "onLanguage:astro",
+    "onLanguage:mdx",
+    "onLanguage:html",
+    "onLanguage:css",
+    "onLanguage:scss",
+    "onLanguage:less"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "pyramidSort.sort",
+        "title": "Pyramid Sort"
+      },
+      {
+        "command": "pyramidSort.sortAscending",
+        "title": "Pyramid Sort: Sort Ascending"
+      },
+      {
+        "command": "pyramidSort.sortDescending",
+        "title": "Pyramid Sort: Sort Descending"
+      },
+      {
+        "command": "pyramidSort.sortImports",
+        "title": "Pyramid Sort: Sort Imports"
+      },
+      {
+        "command": "pyramidSort.sortAttributes",
+        "title": "Pyramid Sort: Sort Attributes"
+      },
+      {
+        "command": "pyramidSort.sortTypes",
+        "title": "Pyramid Sort: Sort Types"
+      },
+      {
+        "command": "pyramidSort.sortObjects",
+        "title": "Pyramid Sort: Sort Objects"
+      },
+      {
+        "command": "pyramidSort.sortCss",
+        "title": "Pyramid Sort: Sort CSS"
+      },
+      {
+        "command": "pyramidSort.forceSortAscending",
+        "title": "Pyramid Sort: Force Sort Ascending"
+      },
+      {
+        "command": "pyramidSort.forceSortDescending",
+        "title": "Pyramid Sort: Force Sort Descending"
+      },
+      {
+        "command": "pyramidSort.saveWithoutSorting",
+        "title": "Pyramid Sort: Save Without Sorting"
+      },
+      {
+        "command": "pyramidSort.setupAIHook",
+        "title": "Pyramid Sort: Setup AI Hook"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "Pyramid Sort",
+        "properties": {
+          "pyramidSort.extensions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              ".js",
+              ".jsx",
+              ".ts",
+              ".tsx",
+              ".css",
+              ".scss"
+            ],
+            "description": "File extensions (e.g. .vue, .svelte, .css) the extension runs on for imports/attributes/types/objects and stylesheets."
+          },
+          "pyramidSort.showDiagnostics": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show informational diagnostics in the Problems tab when code is not sorted."
+          }
+        }
+      },
+      {
+        "title": "Pyramid Sort: Imports",
+        "properties": {
+          "pyramidSort.sortImportsOnSave": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sort imports when the file is saved."
+          },
+          "pyramidSort.imports.direction": {
+            "type": "string",
+            "enum": [
+              "ascending",
+              "descending",
+              "auto"
+            ],
+            "default": "ascending",
+            "description": "Sort direction for imports by line length. \"auto\" uses the line above the import block vs median import line length."
+          },
+          "pyramidSort.imports.consolidateMultilineImports": {
+            "type": "boolean",
+            "default": true,
+            "description": "Collapse multi-line imports into single-line imports grouped to fit within maxLineWidth."
+          },
+          "pyramidSort.imports.maxLineWidth": {
+            "type": "number",
+            "default": 0,
+            "description": "Max characters per import line when consolidating multi-line imports. Use 0 for automatic width from Prettier config files (e.g. .prettierrc, package.json \"prettier\"), then the Prettier extension's printWidth, then editor.rulers; set a positive number to override."
+          },
+          "pyramidSort.imports.groupByEmptyRows": {
+            "type": "boolean",
+            "default": true,
+            "description": "Treat blank lines as group boundaries when sorting imports."
+          }
+        }
+      },
+      {
+        "title": "Pyramid Sort: Attributes",
+        "properties": {
+          "pyramidSort.sortAttributesOnSave": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sort JSX/HTML attributes when the file is saved."
+          },
+          "pyramidSort.attributes.direction": {
+            "type": "string",
+            "enum": [
+              "ascending",
+              "descending",
+              "auto"
+            ],
+            "default": "ascending",
+            "description": "Sort direction for JSX/HTML attributes by line length. \"auto\" compares the opening tag line to attribute lines."
+          },
+          "pyramidSort.attributes.groupByEmptyRows": {
+            "type": "boolean",
+            "default": true,
+            "description": "Treat blank lines as group boundaries when sorting JSX/HTML attributes."
+          }
+        }
+      },
+      {
+        "title": "Pyramid Sort: Types",
+        "properties": {
+          "pyramidSort.sortTypesOnSave": {
+            "type": "boolean",
+            "default": false,
+            "description": "Sort type/interface/enum bodies on save."
+          },
+          "pyramidSort.types.direction": {
+            "type": "string",
+            "enum": [
+              "ascending",
+              "descending",
+              "auto"
+            ],
+            "default": "ascending",
+            "description": "Sort direction for type/interface/enum members. \"auto\" compares the declaration line to body lines."
+          },
+          "pyramidSort.types.groupByEmptyRows": {
+            "type": "boolean",
+            "default": true,
+            "description": "Treat blank lines as group boundaries inside type/interface/enum blocks."
+          }
+        }
+      },
+      {
+        "title": "Pyramid Sort: Objects",
+        "properties": {
+          "pyramidSort.sortObjectsOnSave": {
+            "type": "boolean",
+            "default": false,
+            "description": "Sort object literal properties on save."
+          },
+          "pyramidSort.objects.direction": {
+            "type": "string",
+            "enum": [
+              "ascending",
+              "descending",
+              "auto"
+            ],
+            "default": "ascending",
+            "description": "Sort direction for object literal properties. \"auto\" compares the line with `{` to body lines."
+          },
+          "pyramidSort.objects.groupByEmptyRows": {
+            "type": "boolean",
+            "default": true,
+            "description": "Treat blank lines as group boundaries inside object literals."
+          },
+          "pyramidSort.objects.sortNestedObjects": {
+            "type": "boolean",
+            "default": false,
+            "description": "Also sort object literals in function calls and nested `key: { }`; uses block-aware sorting."
+          }
+        }
+      },
+      {
+        "title": "Pyramid Sort: CSS",
+        "properties": {
+          "pyramidSort.sortCssOnSave": {
+            "type": "boolean",
+            "default": false,
+            "description": "Sort CSS/SCSS declarations inside rule blocks on save."
+          },
+          "pyramidSort.css.direction": {
+            "type": "string",
+            "enum": [
+              "ascending",
+              "descending",
+              "auto"
+            ],
+            "default": "ascending",
+            "description": "Sort direction for CSS declarations. \"auto\" compares the selector line to declaration lines."
+          },
+          "pyramidSort.css.groupByEmptyRows": {
+            "type": "boolean",
+            "default": true,
+            "description": "Treat blank lines as group boundaries inside CSS rule blocks."
+          }
+        }
+      },
+      {
+        "title": "Pyramid Sort: Force Sort",
+        "properties": {
+          "pyramidSort.forceSort.groupByEmptyRows": {
+            "type": "boolean",
+            "default": true,
+            "description": "Treat blank lines as group boundaries for Force Sort commands."
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "build": "npm run build:extension && npm run build:cli",
+    "build:extension": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
+    "build:cli": "esbuild src/cli.ts --bundle --outfile=dist/cli.js --format=cjs --platform=node --minify --banner:js=\"#!/usr/bin/env node\"",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "vscode:prepublish": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.9.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
