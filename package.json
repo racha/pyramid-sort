@@ -36,9 +36,9 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "main": "./dist/extension.js",
+  "main": "dist/extension.js",
   "bin": {
-    "pyramid-sort": "./dist/cli.js"
+    "pyramid-sort": "dist/cli.js"
   },
   "files": [
     "dist/cli.js",
@@ -329,8 +329,9 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "package": "vsce package",
-    "publish": "vsce publish",
+    "package:vscode": "vsce package",
+    "publish:vscode": "vsce publish",
+    "publish:npm": "npm publish",
     "vscode:prepublish": "npm run build",
     "prepublishOnly": "npm run lint && npm test && npm run build"
   },
