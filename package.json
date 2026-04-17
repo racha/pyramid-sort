@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/racha/pyramid-sort"
+    "url": "git+https://github.com/racha/pyramid-sort.git"
   },
   "bugs": {
     "url": "https://github.com/racha/pyramid-sort/issues"
@@ -40,6 +40,14 @@
   "bin": {
     "pyramid-sort": "./dist/cli.js"
   },
+  "files": [
+    "dist/cli.js",
+    "dist/extension.js",
+    "icon.png",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "activationEvents": [
     "onLanguage:javascript",
     "onLanguage:javascriptreact",
@@ -323,7 +331,8 @@
     "test:watch": "vitest",
     "package": "vsce package",
     "publish": "vsce publish",
-    "vscode:prepublish": "npm run build"
+    "vscode:prepublish": "npm run build",
+    "prepublishOnly": "npm run lint && npm test && npm run build"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
