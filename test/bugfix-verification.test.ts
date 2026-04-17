@@ -180,3 +180,143 @@ describe('Bug #5: CSS nested rule scrambling', () => {
     expect(closingIdx).toBeGreaterThan(blueIdx);
   });
 });
+
+// ─── Bug #6: JSX attribute with multi-line value body was shredded ────────────
+// An attribute whose value is a multi-line arrow function (or any value that spans
+// multiple lines) used to be split line-by-line and reordered — destroying the
+// JSX. The attribute must be treated as a single atomic block.
+describe('Bug #6: multi-line JSX attribute value preserved as atomic block', () => {
+  const attrOpts = { direction: 'ascending' as const, groupByEmptyRows: true };
+
+  it('preserves arrow-function body with nested braces', () => {
+    const src = [
+      '<ZoneDialog',
+      '   accountId={accountId}',
+      '   onClose={() => {',
+      '      setZoneDialogOpen(false);',
+      '      mutate();',
+      '   }}',
+      '/>',
+    ].join('\n');
+
+    const out = sortAllAttributes(src, attrOpts);
+
+    expect(out).toContain('onClose={() => {');
+    expect(out).toContain('      setZoneDialogOpen(false);');
+    expect(out).toContain('      mutate();');
+    expect(out).toContain('   }}');
+
+    const outLines = out.split('\n');
+    const onCloseIdx = outLines.findIndex((l) => l.trim().startsWith('onClose='));
+    const setterIdx = outLines.findIndex((l) => l.includes('setZoneDialogOpen(false);'));
+    const mutateIdx = outLines.findIndex((l) => l.includes('mutate();'));
+    const closeBraceIdx = outLines.findIndex((l) => l.trim() === '}}');
+
+    expect(setterIdx).toBe(onCloseIdx + 1);
+    expect(mutateIdx).toBe(onCloseIdx + 2);
+    expect(closeBraceIdx).toBe(onCloseIdx + 3);
+  });
+
+  it('sorts siblings by first-line length with multi-line values staying atomic', () => {
+    const src = [
+      '<Form',
+      '  onSubmit={(data) => {',
+      '    validate(data);',
+      '    save(data);',
+      '  }}',
+      '  id="x"',
+      '  className="form"',
+      '/>',
+    ].join('\n');
+
+    const out = sortAllAttributes(src, attrOpts);
+
+    expect(out).toContain('onSubmit={(data) => {');
+    expect(out).toContain('    validate(data);');
+    expect(out).toContain('    save(data);');
+    expect(out).toContain('  }}');
+    expect(out).toContain('id="x"');
+    expect(out).toContain('className="form"');
+
+    const outLines = out.split('\n');
+    const idIdx = outLines.findIndex((l) => l.trim() === 'id="x"');
+    const classIdx = outLines.findIndex((l) => l.trim() === 'className="form"');
+    const onSubmitIdx = outLines.findIndex((l) => l.trim().startsWith('onSubmit='));
+    const validateIdx = outLines.findIndex((l) => l.includes('validate(data);'));
+    const saveIdx = outLines.findIndex((l) => l.includes('save(data);'));
+    const closeBraceIdx = outLines.findIndex((l) => l.trim() === '}}');
+
+    expect(idIdx).toBeLessThan(onSubmitIdx);
+    expect(classIdx).toBeLessThan(onSubmitIdx);
+
+    expect(validateIdx).toBe(onSubmitIdx + 1);
+    expect(saveIdx).toBe(onSubmitIdx + 2);
+    expect(closeBraceIdx).toBe(onSubmitIdx + 3);
+  });
+
+  it('handles multiple multi-line attribute values in the same tag', () => {
+    const src = [
+      '<Button',
+      '  onClick={() => {',
+      '    fire();',
+      '  }}',
+      '  disabled={true}',
+      '  onMouseEnter={() => {',
+      '    hover();',
+      '  }}',
+      '/>',
+    ].join('\n');
+
+    const out = sortAllAttributes(src, attrOpts);
+
+    for (const token of [
+      'onClick={() => {',
+      '    fire();',
+      '  }}',
+      'disabled={true}',
+      'onMouseEnter={() => {',
+      '    hover();',
+    ]) {
+      expect(out).toContain(token);
+    }
+
+    const outLines = out.split('\n');
+    const onClickIdx = outLines.findIndex((l) => l.trim().startsWith('onClick='));
+    expect(outLines[onClickIdx + 1]).toContain('fire();');
+    expect(outLines[onClickIdx + 2].trim()).toBe('}}');
+
+    const onMouseEnterIdx = outLines.findIndex((l) => l.trim().startsWith('onMouseEnter='));
+    expect(outLines[onMouseEnterIdx + 1]).toContain('hover();');
+    expect(outLines[onMouseEnterIdx + 2].trim()).toBe('}}');
+  });
+
+  it('preserves blank-line groups around multi-line attribute values', () => {
+    const src = [
+      '<Input',
+      '  name="email"',
+      '  value={email}',
+      '',
+      '  onChange={(e) => {',
+      '    setEmail(e.target.value);',
+      '  }}',
+      '  onBlur={handleBlur}',
+      '/>',
+    ].join('\n');
+
+    const out = sortAllAttributes(src, attrOpts);
+    const outLines = out.split('\n');
+
+    const blankIdx = outLines.findIndex((l) => l.trim() === '' && outLines.indexOf(l) > 0);
+    expect(blankIdx).toBeGreaterThan(0);
+
+    const firstGroup = outLines.slice(1, blankIdx).join('\n');
+    const secondGroup = outLines.slice(blankIdx + 1, outLines.length - 1).join('\n');
+
+    expect(firstGroup).toContain('name="email"');
+    expect(firstGroup).toContain('value={email}');
+
+    expect(secondGroup).toContain('onChange={(e) => {');
+    expect(secondGroup).toContain('setEmail(e.target.value);');
+    expect(secondGroup).toContain('onBlur={handleBlur}');
+  });
+});

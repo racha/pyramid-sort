@@ -79,10 +79,19 @@ export interface ParsedImport {
 }
 
 export interface ParsedAttribute {
-  /** The full text of the attribute (trimmed) */
+  /** The full text of the attribute (trimmed, single-line form) */
   text: string;
   /** Length used for sorting (trimmed, concatenated if multi-line) */
   sortLength: number;
+  /**
+   * The original source lines composing this attribute, preserved verbatim.
+   * For a single-line attribute this is one entry; for multi-line attribute
+   * values (e.g. `onClose={() => { … }}`) this holds every source line.
+   * Blank separators (for empty-row grouping) use a single empty string here.
+   */
+  originalLines: string[];
+  /** True when this entry represents a blank-line separator between attribute groups. */
+  isBlankSeparator?: boolean;
 }
 
 export interface TagWithAttributes {

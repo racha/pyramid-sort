@@ -205,7 +205,7 @@ function refreshDiagnostics(doc: vscode.TextDocument) {
   const diags: vscode.Diagnostic[] = [];
 
   if (CSS_LANGS.has(doc.languageId)) {
-    if (config.get<boolean>('sortCssOnSave', false)) {
+    if (config.get<boolean>('diagnostics.css', false)) {
       diags.push(...checkCss(source, getCssOptions()).map((f) => findingToDiagnostic(doc, f)));
     }
     diagnosticCollection?.set(doc.uri, diags);
@@ -217,17 +217,17 @@ function refreshDiagnostics(doc: vscode.TextDocument) {
     return;
   }
 
-  if (config.get<boolean>('sortImportsOnSave', true)) {
+  if (config.get<boolean>('diagnostics.imports', true)) {
     const imp = checkImports(source, getImportOptions(undefined, doc.uri));
     if (imp) diags.push(findingToDiagnostic(doc, imp));
   }
-  if (config.get<boolean>('sortAttributesOnSave', true)) {
+  if (config.get<boolean>('diagnostics.attributes', true)) {
     diags.push(...checkAttributes(source, getAttributeOptions()).map((f) => findingToDiagnostic(doc, f)));
   }
-  if (config.get<boolean>('sortTypesOnSave', false)) {
+  if (config.get<boolean>('diagnostics.types', false)) {
     diags.push(...checkTypes(source, getTypeOptions()).map((f) => findingToDiagnostic(doc, f)));
   }
-  if (config.get<boolean>('sortObjectsOnSave', false)) {
+  if (config.get<boolean>('diagnostics.objects', false)) {
     diags.push(...checkObjects(source, getObjectOptions()).map((f) => findingToDiagnostic(doc, f)));
   }
 

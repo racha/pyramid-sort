@@ -2,7 +2,7 @@
   "name": "pyramid-sort",
   "displayName": "Pyramid Sort",
   "description": "Sort your imports, attributes, types, objects & CSS by line length — short lines on top, long lines on the bottom. Clean pyramid-shaped code.",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "publisher": "INVEON-Development",
   "license": "MIT",
   "icon": "icon.png",
@@ -127,7 +127,32 @@
           "pyramidSort.showDiagnostics": {
             "type": "boolean",
             "default": true,
-            "description": "Show informational diagnostics in the Problems tab when code is not sorted."
+            "description": "Master switch for Problems-tab diagnostics. Turn off to silence every category at once; otherwise each category is controlled by its own `pyramidSort.diagnostics.*` toggle."
+          },
+          "pyramidSort.diagnostics.imports": {
+            "type": "boolean",
+            "default": true,
+            "description": "Report import-order problems in the Problems tab."
+          },
+          "pyramidSort.diagnostics.attributes": {
+            "type": "boolean",
+            "default": true,
+            "description": "Report JSX/HTML attribute-order problems in the Problems tab."
+          },
+          "pyramidSort.diagnostics.types": {
+            "type": "boolean",
+            "default": false,
+            "description": "Report type/interface/enum-member order problems in the Problems tab."
+          },
+          "pyramidSort.diagnostics.objects": {
+            "type": "boolean",
+            "default": false,
+            "description": "Report object-literal property-order problems in the Problems tab."
+          },
+          "pyramidSort.diagnostics.css": {
+            "type": "boolean",
+            "default": false,
+            "description": "Report CSS/SCSS declaration-order problems in the Problems tab."
           }
         }
       },

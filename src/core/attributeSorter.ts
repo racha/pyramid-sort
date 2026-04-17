@@ -1,5 +1,5 @@
-import { resolveDirection, sortLinesWithGrouping } from './groupSort';
-import { AttributeSorterOptions, ParsedAttribute, TagWithAttributes } from './types';
+import { resolveDirection } from './groupSort';
+import { AttributeSorterOptions, ParsedAttribute, ResolvedDirection, TagWithAttributes } from './types';
 
 /**
  * Determine if a character is inside a string/template literal or bracket context.
@@ -109,10 +109,10 @@ export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
       const trimmedAttr = firstAttrText.trim();
       if (trimmedAttr !== '>' && trimmedAttr !== '/>') {
         attrIndent = tagIndent + '  ';
-        const state = trackAttributeState(firstAttrText);
         attributes.push({
-          text: firstAttrText.trim(),
-          sortLength: firstAttrText.trim().length,
+          text: trimmedAttr,
+          sortLength: trimmedAttr.length,
+          originalLines: [attrIndent + trimmedAttr],
         });
       }
     }
@@ -122,6 +122,17 @@ export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
     while (i < lines.length) {
       const attrLine = lines[i];
       const attrTrimmed = attrLine.trim();
+
+      if (attrTrimmed === '') {
+        attributes.push({
+          text: '',
+          sortLength: 0,
+          originalLines: [''],
+          isBlankSeparator: true,
+        });
+        i++;
+        continue;
+      }
 
       if (attrTrimmed === '>' || attrTrimmed === '/>') {
         tagClose = attrTrimmed;
@@ -139,6 +150,7 @@ export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
             attributes.push({
               text: attrPart,
               sortLength: attrPart.length,
+              originalLines: [attrIndent + attrPart],
             });
           }
           tagClose = closeMatch[1];
@@ -175,11 +187,26 @@ export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
 
       const cleanAttr = fullAttr.replace(/(\/?>)\s*$/, '').trim();
       const trailingClose = fullAttr.match(/(\/?>)\s*$/);
-      
+
       if (cleanAttr.length > 0) {
+        const rawSourceLines = lines.slice(i, attrEndLine + 1);
+        const lastRawLine = rawSourceLines[rawSourceLines.length - 1];
+        const lastTrailingMatch = lastRawLine.match(/(\/?>)\s*$/);
+        if (lastTrailingMatch) {
+          const stripped = lastRawLine.slice(
+            0,
+            lastRawLine.length - lastTrailingMatch[0].length
+          ).trimEnd();
+          if (stripped.length > 0) {
+            rawSourceLines[rawSourceLines.length - 1] = stripped;
+          } else {
+            rawSourceLines.pop();
+          }
+        }
         attributes.push({
           text: cleanAttr,
           sortLength: cleanAttr.length,
+          originalLines: rawSourceLines,
         });
       }
 
@@ -194,7 +221,8 @@ export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
       endLine = attrEndLine;
     }
 
-    if (tagClose && attributes.length > 1) {
+    const realAttrCount = attributes.filter((a) => !a.isBlankSeparator).length;
+    if (tagClose && realAttrCount > 1) {
       results.push({
         startLine,
         endLine,
@@ -210,54 +238,44 @@ export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
   return results;
 }
 
-function trackAttributeState(text: string): BracketState {
-  let state = createBracketState();
-  for (let i = 0; i < text.length; i++) {
-    state = advanceChar(state, text[i], i > 0 ? text[i - 1] : '');
-  }
-  return state;
-}
-
 /**
- * Collect all attribute lines from a tag, normalizing inline attributes onto
- * their own lines. This prevents data loss when attributes share a line with
- * the opening tag name or closing bracket.
+ * Split the parsed attribute list into contiguous groups divided by blank separators.
+ * When `groupByEmptyRows` is false, blanks are discarded and everything sorts as a
+ * single group.
  */
-function collectAttributeLines(
-  lines: string[],
-  tag: TagWithAttributes
-): string[] {
-  const tagOpenRe = /^(\s*)<[A-Za-z_][A-Za-z0-9_.]*\s+(.+)$/;
-  const result: string[] = [];
+function splitAttributesIntoGroups(
+  attributes: ParsedAttribute[],
+  groupByEmptyRows: boolean
+): ParsedAttribute[][] {
+  if (!groupByEmptyRows) {
+    return [attributes.filter((a) => !a.isBlankSeparator)];
+  }
 
-  const firstLine = lines[tag.startLine];
-  const inlineMatch = firstLine.match(tagOpenRe);
-  if (inlineMatch) {
-    const inlineAttr = inlineMatch[2].trim();
-    if (inlineAttr !== '>' && inlineAttr !== '/>') {
-      result.push(tag.attrIndent + inlineAttr);
+  const groups: ParsedAttribute[][] = [[]];
+  for (const a of attributes) {
+    if (a.isBlankSeparator) {
+      if (groups[groups.length - 1].length > 0) groups.push([]);
+    } else {
+      groups[groups.length - 1].push(a);
     }
   }
+  return groups.filter((g) => g.length > 0);
+}
 
-  for (let li = tag.startLine + 1; li < tag.endLine; li++) {
-    result.push(lines[li]);
-  }
-
-  if (tag.endLine > tag.startLine) {
-    const lastTrimmed = lines[tag.endLine].trim();
-    if (lastTrimmed !== '>' && lastTrimmed !== '/>') {
-      const attrPart = lastTrimmed.replace(/(\/?>)\s*$/, '').trim();
-      if (attrPart.length > 0) {
-        result.push(tag.attrIndent + attrPart);
-      }
-    }
-  }
-
-  return result;
+function sortAttributeGroup(
+  group: ParsedAttribute[],
+  direction: ResolvedDirection
+): ParsedAttribute[] {
+  return [...group].sort((a, b) => {
+    const diff = a.sortLength - b.sortLength;
+    return direction === 'ascending' ? diff : -diff;
+  });
 }
 
 /**
- * Sort all multi-line JSX/HTML tag attributes in the source by length.
+ * Sort all multi-line JSX/HTML tag attributes in the source by length,
+ * preserving multi-line attribute values (e.g. arrow-function bodies) as
+ * atomic units.
  */
 export function sortAllAttributes(source: string, options: AttributeSorterOptions): string {
   const lines = source.split('\n');
@@ -267,18 +285,23 @@ export function sortAllAttributes(source: string, options: AttributeSorterOption
 
   for (let t = tags.length - 1; t >= 0; t--) {
     const tag = tags[t];
-    const mid = collectAttributeLines(lines, tag);
     const openerLine = `${tag.tagIndent}${tag.tagOpen}`;
-    const dir = resolveDirection(options.direction, openerLine, mid);
-    const sortedMid = sortLinesWithGrouping(
-      mid,
-      dir,
-      options.groupByEmptyRows
-    );
+    const firstLineTexts = tag.attributes
+      .filter((a) => !a.isBlankSeparator)
+      .map((a) => a.originalLines[0] ?? a.text);
+    const dir = resolveDirection(options.direction, openerLine, firstLineTexts);
+
+    const groups = splitAttributesIntoGroups(tag.attributes, options.groupByEmptyRows);
+    const sortedGroups = groups.map((g) => sortAttributeGroup(g, dir));
 
     const newLines: string[] = [];
-    newLines.push(`${tag.tagIndent}${tag.tagOpen}`);
-    newLines.push(...sortedMid);
+    newLines.push(openerLine);
+    for (let gi = 0; gi < sortedGroups.length; gi++) {
+      if (gi > 0) newLines.push('');
+      for (const attr of sortedGroups[gi]) {
+        newLines.push(...attr.originalLines);
+      }
+    }
     newLines.push(`${tag.tagIndent}${tag.tagClose}`);
 
     lines.splice(tag.startLine, tag.endLine - tag.startLine + 1, ...newLines);

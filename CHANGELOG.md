@@ -1,14 +1,21 @@
 # Changelog
 
-## [0.2.4] - 2026-04-17
-
-### Changed
-
-- **Selection-aware category commands** — *Sort Imports*, *Sort Attributes*, *Sort Types*, *Sort Objects*, and *Sort CSS* now sort **only the selected lines** when there is a non-empty selection, and fall back to sorting the whole file when nothing is selected. Matches the existing behavior of the force-ascending / force-descending commands.
+## [0.3.0] - 2026-04-17
 
 ### Added
 
-- **21 new integration tests** in `test/complex-scenarios.test.ts` covering realistic, hard-to-parse inputs: kitchen-sink import files with `'use client'` + side-effects + `node:` specifiers + multi-line type imports, deeply nested config objects with spreads and arrays-of-objects, interfaces with nested inline object types, enums, CSS with `&:hover` / `@media` / `@keyframes` / custom properties, and JSX with spread props, ternaries, and handler bodies.
+- Full **multi-line support** across every sorter — objects, types/interfaces, CSS/SCSS, and JSX attributes. Values that span multiple lines (template literals, arrow-function bodies, nested objects, union types, CSS function values, etc.) are now treated as atomic blocks and never shredded.
+- **Per-category diagnostic toggles** — `pyramidSort.diagnostics.{imports,attributes,types,objects,css}`. Defaults: imports and attributes **on**, types/objects/CSS **off**. Diagnostics are now independent of on-save sorting.
+- **Selection-aware category commands** — `Sort Imports`, `Sort Attributes`, `Sort Types`, `Sort Objects`, `Sort CSS` now sort only the selection when there is one, otherwise the whole file.
+
+### Fixed
+
+- **Comment contents no longer corrupt sorter state.** Stray `{`, `}`, `"`, or `'` characters inside `//` or `/* */` comments used to break bracket matching and string tracking; the sorter now skips comments entirely when scanning.
+- **Import diagnostic false positives.** Import order is now validated logically instead of by textual diff, so reflow, stable-sort ties, and blank-line normalization no longer trigger warnings on already-sorted files. Messages now pinpoint the exact offending line and why.
+
+### Changed
+
+- **On-save defaults** — imports and attributes on; types, objects, CSS off (unchanged, called out for clarity).
 
 ## [0.2.3] - 2026-04-16
 

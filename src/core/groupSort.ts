@@ -90,51 +90,162 @@ export function sortLinesWithGrouping(
   return out;
 }
 
-/** Brace depth after scanning one line, starting from `startDepth`. String-aware. */
-function scanLineBraceDepth(line: string, startDepth: number): number {
-  let depth = startDepth;
-  let inStr: '"' | "'" | '`' | null = null;
+type StringKind = '"' | "'" | '`' | null;
+
+interface ScanState {
+  depth: number;
+  inStr: StringKind;
+  inBlockComment: boolean;
+}
+
+/**
+ * Scan one line, carrying bracket depth, string state, and block-comment
+ * state in from the previous line. Line comments (`//`) terminate at EOL and
+ * are not counted for brackets or quotes. Block comments (`/* ... *\/`) may
+ * span multiple lines and are likewise skipped for brackets/quotes.
+ */
+function scanLine(line: string, start: ScanState): ScanState {
+  let depth = start.depth;
+  let inStr: StringKind = start.inStr;
+  let inBlock = start.inBlockComment;
+
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
+    const next = i + 1 < line.length ? line[i + 1] : '';
     const prev = i > 0 ? line[i - 1] : '';
+
+    if (inBlock) {
+      if (c === '*' && next === '/') {
+        inBlock = false;
+        i++;
+      }
+      continue;
+    }
+
     if (inStr) {
       if (c === inStr && prev !== '\\') inStr = null;
       continue;
     }
-    if (c === '"' || c === "'" || c === '`') {
-      inStr = c as '"' | "'" | '`';
+
+    if (c === '/' && next === '/') break;
+    if (c === '/' && next === '*') {
+      inBlock = true;
+      i++;
       continue;
     }
+
+    if (c === '"' || c === "'" || c === '`') {
+      inStr = c as StringKind;
+      continue;
+    }
+
     if (c === '{' || c === '[' || c === '(') depth++;
     else if (c === '}' || c === ']' || c === ')') depth--;
   }
-  return depth;
+
+  return { depth, inStr, inBlockComment: inBlock };
+}
+
+const EMPTY_SCAN: ScanState = { depth: 0, inStr: null, inBlockComment: false };
+
+/** Strip line and block comments so we can inspect the last real token. */
+function stripComments(line: string): string {
+  return line.replace(/\/\/.*$/, '').replace(/\/\*[\s\S]*?\*\//g, '');
 }
 
 /**
- * Split `lines` into depth-0 children: each child is one line or a multi-line span until braces balance.
- * Used for object literal bodies with nested `{ }`.
+ * Does this line look like the start of a new property / declaration / type
+ * member? Used to disambiguate a trailing `,` (property terminator) from a `,`
+ * that continues a multi-item CSS value like `transition:` / `box-shadow:`.
+ */
+function isStartOfNewChild(line: string): boolean {
+  const t = line.trim();
+  if (!t) return false;
+
+  if (t.startsWith('//') || t.startsWith('/*')) return true;
+
+  if (/^[)\]}]/.test(t)) return true;
+
+  if (t.startsWith('@') || t.startsWith('--') || t.startsWith('$') || t.startsWith('...')) return true;
+
+  if (/^["'`]/.test(t)) {
+    const quote = t[0];
+    let idx = 1;
+    while (idx < t.length && !(t[idx] === quote && t[idx - 1] !== '\\')) idx++;
+    const afterQuote = t.slice(idx + 1).trimStart();
+    return afterQuote.startsWith(':');
+  }
+
+  if (/^(readonly|public|private|protected|static|get|set|async|declare|abstract|override)\s/.test(t)) return true;
+
+  if (/^[A-Za-z_][\w-]*\s*\??\s*:/.test(t)) return true;
+
+  if (/^[A-Za-z_][\w]*\s*(?:<[^>]*>)?\s*[=,]/.test(t)) return true;
+
+  if (/^[A-Za-z_$][\w$]*\s*\(/.test(t) && /\)\s*[:{]/.test(t)) return true;
+
+  if (t.startsWith('[')) return true;
+
+  if (t.endsWith('{')) return true;
+
+  return false;
+}
+
+/**
+ * Is the chunk that ends at `line` complete, given its final scan state and
+ * the following line (needed to resolve the `,` ambiguity)?
+ */
+function isChunkComplete(
+  line: string,
+  state: ScanState,
+  nextLine: string | undefined
+): boolean {
+  if (state.depth !== 0) return false;
+  if (state.inStr !== null) return false;
+  if (state.inBlockComment) return false;
+
+  const stripped = stripComments(line).trimEnd();
+  if (!stripped) return false;
+
+  const last = stripped[stripped.length - 1];
+
+  if (last === ';') return true;
+
+  if (last === ',' || last === '}' || last === ']' || last === ')') {
+    if (nextLine === undefined) return true;
+    return isStartOfNewChild(nextLine);
+  }
+
+  return false;
+}
+
+/**
+ * Split `lines` into atomic child chunks. A chunk may span multiple lines when
+ * the value is a multi-line function call / array / object literal, a template
+ * literal, a CSS multi-line value (e.g. `grid-template-areas`, `box-shadow`
+ * lists), a multi-line union type, a `+`/`|`-continued expression, or an
+ * unclosed block comment.
  */
 export function splitDepthZeroChildren(lines: string[]): string[][] {
   if (lines.length === 0) return [];
   const children: string[][] = [];
   let i = 0;
+
   while (i < lines.length) {
-    let depth = scanLineBraceDepth(lines[i], 0);
-    if (depth === 0) {
-      children.push([lines[i]]);
-      i++;
-      continue;
-    }
     const chunk: string[] = [lines[i]];
-    i++;
-    while (i < lines.length && depth > 0) {
-      depth = scanLineBraceDepth(lines[i], depth);
-      chunk.push(lines[i]);
+    let state = scanLine(lines[i], EMPTY_SCAN);
+
+    while (i + 1 < lines.length) {
+      if (isChunkComplete(lines[i], state, lines[i + 1])) break;
       i++;
+      state = scanLine(lines[i], state);
+      chunk.push(lines[i]);
     }
+
+    i++;
     children.push(chunk);
   }
+
   return children;
 }
 

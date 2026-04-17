@@ -33,7 +33,7 @@ For **imports**, **attributes**, **types**, **objects**, and **CSS**, you can se
 
 - **Commands** — Full file, selection, or category-only (imports, attributes, types, objects, CSS, force ascending / descending).
 - **Sort on save** — Separate toggles: imports, attributes, types, objects, CSS (types / objects / CSS are opt-in).
-- **Diagnostics** — When enabled, **information** entries in the Problems tab if the file differs from the sorted result for each **on-save** category that is turned on; **quick-fix: “Sort with Pyramid Sort”** runs the matching command.
+- **Diagnostics** — Per-category **information** entries in the Problems tab when sort order is off. Imports and attributes report by default; types, objects, and CSS are opt-in; **quick-fix: “Sort with Pyramid Sort”** runs the matching command.
 - **Selection sort** — Heuristic: imports, JSX, type declarations, object patterns, or CSS depending on what the selection looks like.
 
 ### CLI and AI workflows
@@ -242,7 +242,12 @@ In the VS Code Settings editor, options are grouped into sections: **Pyramid Sor
 | `pyramidSort.forceSort.groupByEmptyRows`          | boolean  | `true`      | Blank lines separate groups for force sort                                                                                                  |
 | `pyramidSort.imports.consolidateMultilineImports` | boolean  | `true`      | Reflow **multi-line** imports only; single-line imports are left as-is                                                                      |
 | `pyramidSort.imports.maxLineWidth`                | number   | `0` (auto)  | **0** = detect from `.prettierrc` / `package.json` → Prettier extension `printWidth` → `editor.rulers[0]` → 80; **&gt; 0** = fixed override |
-| `pyramidSort.showDiagnostics`                     | boolean  | `true`      | Problems-tab hints when code differs from sorted output (per enabled save categories)                                                       |
+| `pyramidSort.showDiagnostics`                     | boolean  | `true`      | Master on/off for Problems-tab diagnostics                                                                                                  |
+| `pyramidSort.diagnostics.imports`                 | boolean  | `true`      | Report import-order problems                                                                                                                |
+| `pyramidSort.diagnostics.attributes`              | boolean  | `true`      | Report JSX/HTML attribute-order problems                                                                                                    |
+| `pyramidSort.diagnostics.types`                   | boolean  | `false`     | Report type/interface/enum-member order problems                                                                                            |
+| `pyramidSort.diagnostics.objects`                 | boolean  | `false`     | Report object-literal property-order problems                                                                                               |
+| `pyramidSort.diagnostics.css`                     | boolean  | `false`     | Report CSS/SCSS declaration-order problems                                                                                                  |
 | `pyramidSort.extensions`                          | string[] | see below   | File extensions the extension runs on (includes `.css` / `.scss` by default); add `.vue`, `.html`, etc. as needed                           |
 
 **Less:** `.less` is not in the default list but is still supported when you open those files (language activation). Add `.less` to `extensions` if you want it listed explicitly with the rest.
@@ -251,7 +256,9 @@ In the VS Code Settings editor, options are grouped into sections: **Pyramid Sor
 
 ## Diagnostics
 
-If `pyramidSort.showDiagnostics` is on, the extension compares the file to the fully sorted result for each category whose **sort on save** toggle is enabled (imports and attributes default to on; types, objects, and CSS default to off). Mismatches show as **information** diagnostics; use the lightbulb **Sort with Pyramid Sort** quick-fix to apply the right command.
+Diagnostics are controlled per category. `pyramidSort.showDiagnostics` is the master switch (default **on**); each `pyramidSort.diagnostics.<category>` toggle decides whether that specific category reports problems. Defaults: **imports and attributes on**; types, objects, and CSS off. Mismatches show as **information** entries in the Problems tab; use the lightbulb **Sort with Pyramid Sort** quick-fix to apply the right command.
+
+Diagnostics and on-save sorting are independent — you can turn on the `types` diagnostic without enabling `sortTypesOnSave`, and vice versa.
 
 ---
 
@@ -347,7 +354,7 @@ code --install-extension INVEON-Development.pyramid-sort
 ### VSIX
 
 ```bash
-code --install-extension pyramid-sort-0.2.4.vsix
+code --install-extension pyramid-sort-0.3.0.vsix
 ```
 
 ---
