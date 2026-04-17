@@ -10,14 +10,14 @@ It covers **imports**, **JSX/HTML attributes**, **type / interface / enum** bodi
 
 ### Sorting
 
-| Area                      | What it does                                                                                                                      |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Imports**               | Sort by line length; optional **external vs local** grouping (blank line between groups)                                          |
-| **JSX / HTML attributes** | Sort attributes inside multiline tags by line length                                                                              |
-| **Types**                 | `type` / `interface` / `enum` bodies (including `export …`)                                                                       |
+| Area                      | What it does                                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Imports**               | Sort by line length; optional **external vs local** grouping (blank line between groups)                                                   |
+| **JSX / HTML attributes** | Sort attributes inside multiline tags by line length                                                                                       |
+| **Types**                 | `type` / `interface` / `enum` bodies (including `export …`)                                                                                |
 | **Objects**               | `const` / `let` / `var` `= {` and `return {`; optional **`sortNestedObjects`** adds `foo({ … })` and `key: { … }` with block-aware sorting |
-| **CSS**                   | Declarations inside `{ … }` rule blocks; nested rules stay put; `@keyframes` steps are not reordered as blocks                    |
-| **Force sort**            | Selected lines only, any language — raw length sort; optional **group by empty rows** (same idea as elsewhere)                    |
+| **CSS**                   | Declarations inside `{ … }` rule blocks; nested rules stay put; `@keyframes` steps are not reordered as blocks                             |
+| **Force sort**            | Selected lines only, any language — raw length sort; optional **group by empty rows** (same idea as elsewhere)                             |
 
 ### Auto direction (`"auto"`)
 
@@ -50,30 +50,31 @@ For **imports**, **attributes**, **types**, **objects**, and **CSS**, you can se
 **Before:**
 
 ```typescript
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
-import { toast } from "react-toastify";
-import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router";
-import { TypedActionCard } from "@/components/common/ActionCard";
-import { IconChevron } from "@/icons/Chevron";
-import { groupActionsByLetter } from "@/utils/actions";
-import { Action, useActionTypes, useCustomActions } from "@/api/action";
+import { c } from "vendor-long-name";
+import { a } from "v";
+import { bb } from "vm";
+import { ddd } from "vnode";
+import { eeee } from "vend";
+
+import { x } from "@/a";
+import { yy } from "@/bb";
+import { zzz } from "@/ccc";
+import { wwww } from "@/long";
 ```
 
 **After (ascending):**
 
 ```typescript
-import { useEffect } from "react";
-import { toast } from "react-toastify";
-import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { a } from "v";
+import { bb } from "vm";
+import { ddd } from "vnode";
+import { eeee } from "vend";
+import { c } from "vendor-long-name";
 
-import { IconChevron } from "@/icons/Chevron";
-import { groupActionsByLetter } from "@/utils/actions";
-import { TypedActionCard } from "@/components/common/ActionCard";
-import { Action, useActionTypes, useCustomActions } from "@/api/action";
+import { x } from "@/a";
+import { yy } from "@/bb";
+import { zzz } from "@/ccc";
+import { wwww } from "@/long";
 ```
 
 ### Attributes
@@ -82,13 +83,13 @@ import { Action, useActionTypes, useCustomActions } from "@/api/action";
 
 ```tsx
 <input
-  className="block w-full grow px-2 text-[15px] text-white/96 outline-none"
+  className="root layout wide text dense stroke muted"
   ref={ref}
   type="text"
-  onChange={(e) => onMessageChange(e.target.value)}
-  name="message"
-  value={message}
-  placeholder="Ask anything..."
+  onChange={(e) => onChange(e.target.value)}
+  name="field-one"
+  value={value}
+  placeholder="Type here..."
 />
 ```
 
@@ -98,11 +99,11 @@ import { Action, useActionTypes, useCustomActions } from "@/api/action";
 <input
   ref={ref}
   type="text"
-  name="message"
-  value={message}
-  placeholder="Ask anything..."
-  onChange={(e) => onMessageChange(e.target.value)}
-  className="block w-full grow px-2 text-[15px] text-white/96 outline-none"
+  value={value}
+  name="field-one"
+  placeholder="Type here..."
+  onChange={(e) => onChange(e.target.value)}
+  className="root layout wide text dense stroke muted"
 />
 ```
 
@@ -111,28 +112,28 @@ import { Action, useActionTypes, useCustomActions } from "@/api/action";
 **Before:**
 
 ```typescript
-type PasswordStats = {
-  hasLower: boolean;
-  hasUpper: boolean;
-  hasSpecial: boolean;
+type Flags = {
+  veryLongPropertyName: boolean;
+  short: boolean;
+  mediumName: boolean;
 
-  lengthOk: boolean;
-  hasNumber: boolean;
-  complexityOk: boolean;
+  longPropName: boolean;
+  tiny: boolean;
+  midProp: boolean;
 };
 ```
 
 **After (ascending, groups preserved):**
 
 ```typescript
-type PasswordStats = {
-  hasLower: boolean;
-  hasUpper: boolean;
-  hasSpecial: boolean;
+type Flags = {
+  short: boolean;
+  mediumName: boolean;
+  veryLongPropertyName: boolean;
 
-  hasNumber: boolean;
-  lengthOk: boolean;
-  complexityOk: boolean;
+  tiny: boolean;
+  midProp: boolean;
+  longPropName: boolean;
 };
 ```
 
@@ -141,26 +142,28 @@ type PasswordStats = {
 **Before:**
 
 ```typescript
-const config = {
-  timeout: 5000,
-  retries: 3,
-  baseUrl: "https://api.example.com",
+const item = {
+  longKeyName: 5000,
+  a: 1,
+  midKey: 2,
+  url: "https://example.test",
 
-  headers: { "Content-Type": "application/json" },
-  cache: true,
+  obj: { k: "v" },
+  done: true,
 };
 ```
 
 **After (ascending, groups preserved):**
 
 ```typescript
-const config = {
-  retries: 3,
-  timeout: 5000,
-  baseUrl: "https://api.example.com",
+const item = {
+  a: 1,
+  midKey: 2,
+  longKeyName: 5000,
+  url: "https://example.test",
 
-  cache: true,
-  headers: { "Content-Type": "application/json" },
+  done: true,
+  obj: { k: "v" },
 };
 ```
 
@@ -169,25 +172,25 @@ const config = {
 **Before:**
 
 ```css
-.card {
+.widget {
   background-color: #fff;
   padding: 16px;
   border-radius: 8px;
 
   font-size: 14px;
-  color: #333;
+  color: #ccc;
 }
 ```
 
 **After (ascending):**
 
 ```css
-.card {
+.widget {
   padding: 16px;
   border-radius: 8px;
   background-color: #fff;
 
-  color: #333;
+  color: #ccc;
   font-size: 14px;
 }
 ```
@@ -217,29 +220,30 @@ const config = {
 
 In the VS Code Settings editor, options are grouped into sections: **Pyramid Sort** (extensions, diagnostics), **Pyramid Sort: Imports**, **Attributes**, **Types**, **Objects**, **CSS**, and **Force Sort**.
 
-| Setting                                           | Type     | Default         | Description                                                                           |
-| ------------------------------------------------- | -------- | --------------- | ------------------------------------------------------------------------------------- |
-| `pyramidSort.sortImportsOnSave`                   | boolean  | `true`          | Sort imports on save                                                                  |
-| `pyramidSort.sortAttributesOnSave`                | boolean  | `true`          | Sort attributes on save                                                               |
-| `pyramidSort.sortTypesOnSave`                     | boolean  | `false`         | Sort type / interface / enum bodies on save                                           |
-| `pyramidSort.sortObjectsOnSave`                   | boolean  | `false`         | Sort object literals on save                                                          |
-| `pyramidSort.sortCssOnSave`                       | boolean  | `false`         | Sort CSS declarations on save                                                         |
-| `pyramidSort.imports.direction`                   | enum     | `ascending`     | `ascending` \| `descending` \| `auto`                                                 |
-| `pyramidSort.attributes.direction`                | enum     | `ascending`     | `ascending` \| `descending` \| `auto`                                                 |
-| `pyramidSort.types.direction`                     | enum     | `ascending`     | `ascending` \| `descending` \| `auto`                                                 |
-| `pyramidSort.objects.direction`                   | enum     | `ascending`     | `ascending` \| `descending` \| `auto`                                                 |
-| `pyramidSort.css.direction`                       | enum     | `ascending`     | `ascending` \| `descending` \| `auto`                                                 |
-| `pyramidSort.imports.groupByEmptyRows`            | boolean  | `true`          | Blank lines separate import groups                                                    |
-| `pyramidSort.attributes.groupByEmptyRows`         | boolean  | `true`          | Blank lines separate attribute groups in a tag                                        |
-| `pyramidSort.types.groupByEmptyRows`              | boolean  | `true`          | Blank lines separate groups inside type bodies                                        |
-| `pyramidSort.objects.groupByEmptyRows`            | boolean  | `true`          | Blank lines separate groups inside object literals                                    |
-| `pyramidSort.objects.sortNestedObjects`           | boolean  | `false`         | Also sort `name({ … })` and nested `prop: { … }`; keeps multi-line nested objects intact |
-| `pyramidSort.css.groupByEmptyRows`                | boolean  | `true`          | Blank lines separate declaration groups in a rule                                     |
-| `pyramidSort.forceSort.groupByEmptyRows`          | boolean  | `true`          | Blank lines separate groups for force sort                                            |
-| `pyramidSort.imports.consolidateMultilineImports` | boolean  | `true`          | Reflow **multi-line** imports only; single-line imports are left as-is                |
-| `pyramidSort.imports.maxLineWidth`                | number   | `0` (auto)      | **0** = detect from `.prettierrc` / `package.json` → Prettier extension `printWidth` → `editor.rulers[0]` → 80; **&gt; 0** = fixed override |
-| `pyramidSort.showDiagnostics`                     | boolean  | `true`          | Problems-tab hints when code differs from sorted output (per enabled save categories) |
-| `pyramidSort.extensions`                          | string[] | see below       | File extensions the extension runs on (includes `.css` / `.scss` by default); add `.vue`, `.html`, etc. as needed |
+| Setting                                           | Type     | Default     | Description                                                                                                                                 |
+| ------------------------------------------------- | -------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pyramidSort.sortImportsOnSave`                   | boolean  | `true`      | Sort imports on save                                                                                                                        |
+| `pyramidSort.sortAttributesOnSave`                | boolean  | `true`      | Sort attributes on save                                                                                                                     |
+| `pyramidSort.sortTypesOnSave`                     | boolean  | `false`     | Sort type / interface / enum bodies on save                                                                                                 |
+| `pyramidSort.sortObjectsOnSave`                   | boolean  | `false`     | Sort object literals on save                                                                                                                |
+| `pyramidSort.sortCssOnSave`                       | boolean  | `false`     | Sort CSS declarations on save                                                                                                               |
+| `pyramidSort.imports.direction`                   | enum     | `ascending` | `ascending` \| `descending` \| `auto`                                                                                                       |
+| `pyramidSort.attributes.direction`                | enum     | `ascending` | `ascending` \| `descending` \| `auto`                                                                                                       |
+| `pyramidSort.types.direction`                     | enum     | `ascending` | `ascending` \| `descending` \| `auto`                                                                                                       |
+| `pyramidSort.objects.direction`                   | enum     | `ascending` | `ascending` \| `descending` \| `auto`                                                                                                       |
+| `pyramidSort.css.direction`                       | enum     | `ascending` | `ascending` \| `descending` \| `auto`                                                                                                       |
+| `pyramidSort.imports.groupByEmptyRows`            | boolean  | `true`      | Blank lines separate import groups                                                                                                          |
+| `pyramidSort.imports.groupExternalLocal`          | boolean  | `true`      | Auto-group imports into external (npm) vs local (relative / alias) with a blank line between them; **false** = pure length sort, one block |
+| `pyramidSort.attributes.groupByEmptyRows`         | boolean  | `true`      | Blank lines separate attribute groups in a tag                                                                                              |
+| `pyramidSort.types.groupByEmptyRows`              | boolean  | `true`      | Blank lines separate groups inside type bodies                                                                                              |
+| `pyramidSort.objects.groupByEmptyRows`            | boolean  | `true`      | Blank lines separate groups inside object literals                                                                                          |
+| `pyramidSort.objects.sortNestedObjects`           | boolean  | `false`     | Also sort `name({ … })` and nested `prop: { … }`; keeps multi-line nested objects intact                                                    |
+| `pyramidSort.css.groupByEmptyRows`                | boolean  | `true`      | Blank lines separate declaration groups in a rule                                                                                           |
+| `pyramidSort.forceSort.groupByEmptyRows`          | boolean  | `true`      | Blank lines separate groups for force sort                                                                                                  |
+| `pyramidSort.imports.consolidateMultilineImports` | boolean  | `true`      | Reflow **multi-line** imports only; single-line imports are left as-is                                                                      |
+| `pyramidSort.imports.maxLineWidth`                | number   | `0` (auto)  | **0** = detect from `.prettierrc` / `package.json` → Prettier extension `printWidth` → `editor.rulers[0]` → 80; **&gt; 0** = fixed override |
+| `pyramidSort.showDiagnostics`                     | boolean  | `true`      | Problems-tab hints when code differs from sorted output (per enabled save categories)                                                       |
+| `pyramidSort.extensions`                          | string[] | see below   | File extensions the extension runs on (includes `.css` / `.scss` by default); add `.vue`, `.html`, etc. as needed                           |
 
 **Less:** `.less` is not in the default list but is still supported when you open those files (language activation). Add `.less` to `extensions` if you want it listed explicitly with the rest.
 
@@ -343,7 +347,7 @@ code --install-extension INVEON-Development.pyramid-sort
 ### VSIX
 
 ```bash
-code --install-extension pyramid-sort-0.2.0.vsix
+code --install-extension pyramid-sort-0.2.4.vsix
 ```
 
 ---

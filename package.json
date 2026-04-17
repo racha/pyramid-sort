@@ -2,7 +2,7 @@
   "name": "pyramid-sort",
   "displayName": "Pyramid Sort",
   "description": "Sort your imports, attributes, types, objects & CSS by line length — short lines on top, long lines on the bottom. Clean pyramid-shaped code.",
-  "version": "0.2.0",
+  "version": "0.2.4",
   "publisher": "INVEON-Development",
   "license": "MIT",
   "icon": "icon.png",
@@ -163,6 +163,11 @@
             "type": "boolean",
             "default": true,
             "description": "Treat blank lines as group boundaries when sorting imports."
+          },
+          "pyramidSort.imports.groupExternalLocal": {
+            "type": "boolean",
+            "default": true,
+            "description": "Auto-group imports into external (npm) vs local (relative / alias) with a blank line between them. Turn off for pure length sort in one block."
           }
         }
       },

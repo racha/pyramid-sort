@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.2.4] - 2026-04-17
+
+### Changed
+
+- **Selection-aware category commands** — *Sort Imports*, *Sort Attributes*, *Sort Types*, *Sort Objects*, and *Sort CSS* now sort **only the selected lines** when there is a non-empty selection, and fall back to sorting the whole file when nothing is selected. Matches the existing behavior of the force-ascending / force-descending commands.
+
+### Added
+
+- **21 new integration tests** in `test/complex-scenarios.test.ts` covering realistic, hard-to-parse inputs: kitchen-sink import files with `'use client'` + side-effects + `node:` specifiers + multi-line type imports, deeply nested config objects with spreads and arrays-of-objects, interfaces with nested inline object types, enums, CSS with `&:hover` / `@media` / `@keyframes` / custom properties, and JSX with spread props, ternaries, and handler bodies.
+
+## [0.2.3] - 2026-04-16
+
+### Added
+
+- **`pyramidSort.imports.groupExternalLocal`** (default `true`) — opt out of auto-grouping external (npm) vs local (relative / alias) imports. When `false`, imports are sorted purely by length in one block, no blank-line separator inserted.
+
+### Changed
+
+- **Clearer import diagnostic message** — now reads *“Imports are not in Pyramid Sort order (by length, with external/local groups)”* when grouping is on, so users aren’t misled when their imports are already sorted by length but the tool still wants to insert a group separator.
+
+## [0.2.2] - 2026-04-16
+
+### Fixed
+
+- **Default path aliases always apply** — `@/` and `~/` are now merged with aliases read from `tsconfig` / `jsconfig` / Vite. Previously, if the project defined *any* `paths` entry, the defaults were dropped, so imports like `@/env` could be misclassified as external npm packages, wrong sort order, and false “not sorted by length” diagnostics.
+
+## [0.2.1] - 2026-04-16
+
+### Changed
+
+- **Marketplace description** — shorter, more casual blurb in `package.json`.
+- **README** — before/after examples use generic names only (no Tailwind, product paths, or app-specific identifiers).
+
 ## [0.2.0] - 2026-04-16
 
 ### Added

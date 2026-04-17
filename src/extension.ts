@@ -96,6 +96,7 @@ function getImportOptions(
     maxLineWidth,
     localAliasPatterns: cachedAliasPatterns,
     groupByEmptyRows: config.get<boolean>('imports.groupByEmptyRows', true),
+    groupExternalLocal: config.get<boolean>('imports.groupExternalLocal', true),
   };
 }
 
@@ -434,6 +435,44 @@ function applyForceSort(editor: vscode.TextEditor, direction: ResolvedDirection)
   return [vscode.TextEdit.replace(range, newText)];
 }
 
+/**
+ * Run a single-category sort. If the editor has a non-empty selection, sort only
+ * that selection; otherwise sort the whole document.
+ */
+function applyCategorySort(
+  editor: vscode.TextEditor,
+  sort: (source: string) => string
+): vscode.TextEdit[] {
+  const document = editor.document;
+  const selection = editor.selection;
+
+  if (!selection.isEmpty) {
+    const startLine = selection.start.line;
+    const endLine = selection.end.line;
+    const lines: string[] = [];
+    for (let i = startLine; i <= endLine; i++) {
+      lines.push(document.lineAt(i).text);
+    }
+    const oldText = lines.join('\n');
+    const newText = sort(oldText);
+    if (newText === oldText) return [];
+    const range = new vscode.Range(
+      new vscode.Position(startLine, 0),
+      new vscode.Position(endLine, document.lineAt(endLine).text.length)
+    );
+    return [vscode.TextEdit.replace(range, newText)];
+  }
+
+  const source = document.getText();
+  const next = sort(source);
+  if (next === source) return [];
+  const fullRange = new vscode.Range(
+    new vscode.Position(0, 0),
+    document.lineAt(document.lineCount - 1).range.end
+  );
+  return [vscode.TextEdit.replace(fullRange, next)];
+}
+
 async function applyEdits(editor: vscode.TextEditor, edits: vscode.TextEdit[]) {
   if (edits.length === 0) return;
 
@@ -570,13 +609,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('pyramidSort.sortImports', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || !isLanguageSupported(editor.document.languageId)) return;
-      const edits = applyFullSort(editor.document, undefined, false, {
-        imports: true,
-        attributes: false,
-        types: false,
-        objects: false,
-        css: false,
-      });
+      const opts = getImportOptions(undefined, editor.document.uri);
+      const edits = applyCategorySort(editor, (src) => sortImports(src, opts));
       await applyEdits(editor, edits);
       scheduleDiagnostics(editor.document);
     })
@@ -586,13 +620,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('pyramidSort.sortAttributes', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || !isLanguageSupported(editor.document.languageId)) return;
-      const edits = applyFullSort(editor.document, undefined, false, {
-        imports: false,
-        attributes: true,
-        types: false,
-        objects: false,
-        css: false,
-      });
+      const opts = getAttributeOptions();
+      const edits = applyCategorySort(editor, (src) => sortAllAttributes(src, opts));
       await applyEdits(editor, edits);
       scheduleDiagnostics(editor.document);
     })
@@ -602,14 +631,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('pyramidSort.sortTypes', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || !isLanguageSupported(editor.document.languageId)) return;
-      const source = editor.document.getText();
-      const next = sortTypeProperties(source, getTypeOptions());
-      if (next === source) return;
-      const fullRange = new vscode.Range(
-        new vscode.Position(0, 0),
-        editor.document.lineAt(editor.document.lineCount - 1).range.end
-      );
-      await applyEdits(editor, [vscode.TextEdit.replace(fullRange, next)]);
+      const opts = getTypeOptions();
+      const edits = applyCategorySort(editor, (src) => sortTypeProperties(src, opts));
+      await applyEdits(editor, edits);
       scheduleDiagnostics(editor.document);
     })
   );
@@ -618,14 +642,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('pyramidSort.sortObjects', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || !isLanguageSupported(editor.document.languageId)) return;
-      const source = editor.document.getText();
-      const next = sortObjectProperties(source, getObjectOptions());
-      if (next === source) return;
-      const fullRange = new vscode.Range(
-        new vscode.Position(0, 0),
-        editor.document.lineAt(editor.document.lineCount - 1).range.end
-      );
-      await applyEdits(editor, [vscode.TextEdit.replace(fullRange, next)]);
+      const opts = getObjectOptions();
+      const edits = applyCategorySort(editor, (src) => sortObjectProperties(src, opts));
+      await applyEdits(editor, edits);
       scheduleDiagnostics(editor.document);
     })
   );
@@ -634,14 +653,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('pyramidSort.sortCss', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || !CSS_LANGS.has(editor.document.languageId)) return;
-      const source = editor.document.getText();
-      const next = sortCssProperties(source, getCssOptions());
-      if (next === source) return;
-      const fullRange = new vscode.Range(
-        new vscode.Position(0, 0),
-        editor.document.lineAt(editor.document.lineCount - 1).range.end
-      );
-      await applyEdits(editor, [vscode.TextEdit.replace(fullRange, next)]);
+      const opts = getCssOptions();
+      const edits = applyCategorySort(editor, (src) => sortCssProperties(src, opts));
+      await applyEdits(editor, edits);
       scheduleDiagnostics(editor.document);
     })
   );
