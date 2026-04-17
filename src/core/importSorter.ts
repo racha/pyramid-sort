@@ -242,6 +242,10 @@ export function sortImportLinesContiguous(
   const flatLines = [...external, ...local];
   const dir = resolveDirection(options.direction, openerBeforeImportBlock, flatLines);
 
+  if (!options.groupExternalLocal) {
+    return sortByLength(flatLines, dir);
+  }
+
   const sortedExternal = sortByLength(external, dir);
   const sortedLocal = sortByLength(local, dir);
 

@@ -139,6 +139,7 @@ function main() {
     maxLineWidth,
     localAliasPatterns: aliasPatterns,
     groupByEmptyRows: config.imports.groupByEmptyRows,
+    groupExternalLocal: config.imports.groupExternalLocal,
   };
 
   const attrOpts = {

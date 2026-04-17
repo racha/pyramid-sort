@@ -76,9 +76,7 @@ export function detectAliasPatterns(workspaceRoot: string): string[] {
     }
   }
 
-  if (detected.length === 0) return DEFAULT_ALIAS_PATTERNS;
-
-  return [...new Set(detected)];
+  return [...new Set([...DEFAULT_ALIAS_PATTERNS, ...detected])];
 }
 
 /**

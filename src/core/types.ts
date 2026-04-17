@@ -13,6 +13,12 @@ export interface ImportSorterOptions {
   maxLineWidth: number;
   localAliasPatterns: string[];
   groupByEmptyRows: boolean;
+  /**
+   * When **true** (default), imports are split into **external** (npm) and
+   * **local** (relative / alias) groups with a blank line between them.
+   * When **false**, all imports are sorted purely by length with no auto-grouping.
+   */
+  groupExternalLocal: boolean;
 }
 
 export interface AttributeSorterOptions {
@@ -110,6 +116,7 @@ export const DEFAULT_CONFIG: PyramidSortConfig = {
     maxLineWidth: 0,
     localAliasPatterns: ['@/', '~/'],
     groupByEmptyRows: true,
+    groupExternalLocal: true,
   },
   attributes: {
     direction: 'ascending',

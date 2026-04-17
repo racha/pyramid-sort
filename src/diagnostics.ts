@@ -26,10 +26,13 @@ export function checkImports(
   if (sorted === source) return null;
   const range = findFirstDiffLineRange(source, sorted);
   if (!range) return null;
+  const message = options.groupExternalLocal
+    ? 'Imports are not in Pyramid Sort order (by length, with external/local groups)'
+    : 'Imports are not sorted by length';
   return {
     startLine: range.start,
     endLine: range.end,
-    message: 'Imports are not sorted by length',
+    message,
     code: 'pyramidSort.imports',
   };
 }

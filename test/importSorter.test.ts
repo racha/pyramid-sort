@@ -8,6 +8,7 @@ const defaults: ImportSorterOptions = {
   maxLineWidth: 80,
   localAliasPatterns: ['@/', '~/'],
   groupByEmptyRows: true,
+  groupExternalLocal: true,
 };
 
 describe('findImportBlockRange', () => {
@@ -223,6 +224,28 @@ describe('sortImports', () => {
     const result = sortImports(source, defaults);
     const lines = result.split('\n').filter((l) => l.trim().length > 0);
     expect(lines.some((l) => l.includes('React'))).toBe(true);
+  });
+
+  it('groupExternalLocal: false sorts all imports by length in one block', () => {
+    const source = [
+      "import { db } from '@/db';",
+      "import { logger } from '@/services/logger';",
+      "import { Prisma } from '@prisma/client';",
+      "import { utils } from '@/utils';",
+    ].join('\n');
+
+    const result = sortImports(source, { ...defaults, groupExternalLocal: false });
+    const lines = result.split('\n');
+    const importLines = lines.filter(l => l.trim().startsWith('import'));
+    const blanks = lines.filter(l => l.trim() === '');
+
+    expect(importLines.length).toBe(4);
+    expect(blanks.length).toBe(0);
+
+    const lengths = importLines.map(l => l.trim().length);
+    for (let i = 1; i < lengths.length; i++) {
+      expect(lengths[i]).toBeGreaterThanOrEqual(lengths[i - 1]);
+    }
   });
 
   it('does not split single-line imports to fit maxLineWidth — only multi-line imports are consolidated', () => {

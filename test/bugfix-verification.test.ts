@@ -12,6 +12,7 @@ const importDefaults: ImportSorterOptions = {
   maxLineWidth: 80,
   localAliasPatterns: ['@/', '~/'],
   groupByEmptyRows: false,
+  groupExternalLocal: true,
 };
 
 // ─── Bug #1: Import with trailing comment was mishandled ──────────────────────
