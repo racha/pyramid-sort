@@ -5,6 +5,10 @@
   "version": "0.4.2",
   "publisher": "INVEON-Development",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "icon": "icon.png",
   "galleryBanner": {
     "color": "#1a1a2e",
