@@ -6,8 +6,7 @@
   "publisher": "INVEON-Development",
   "license": "MIT",
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "icon": "icon.png",
   "galleryBanner": {
