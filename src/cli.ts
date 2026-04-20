@@ -2,14 +2,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { detectAliasPatterns } from './core/aliasDetector';
-import { sortAllAttributes } from './core/attributeSorter';
-import { sortCssProperties } from './core/cssSorter';
-import { sortImports } from './core/importSorter';
-import { sortObjectProperties } from './core/objectSorter';
-import { getLanguageKind, getImportRegion, getAttributeRegions } from './core/scopeDetector';
-import { sortTypeProperties } from './core/typeSorter';
+import { listWorkspaceFiles } from './core/fileWalker';
+import { buildScanReportMarkdown, buildSortReportMarkdown } from './core/reportBuilder';
+import {
+  CategoryChanged,
+  PipelineSorterOptions,
+  scanFile,
+  sortFileSource,
+  SortModeFlags,
+} from './core/sortPipeline';
 import { resolvePrintWidth } from './core/printWidth';
-import { PyramidSortConfig, DEFAULT_CONFIG, SortDirection } from './core/types';
+import { DEFAULT_CONFIG, PyramidSortConfig, SortDirection } from './core/types';
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
   '.js': 'javascript',
@@ -41,6 +44,17 @@ function loadConfig(startDir: string): PyramidSortConfig {
           css: { ...DEFAULT_CONFIG.css, ...raw.css },
           forceSort: { ...DEFAULT_CONFIG.forceSort, ...raw.forceSort },
           extensions: raw.extensions ?? DEFAULT_CONFIG.extensions,
+          showDiagnostics: raw.showDiagnostics ?? DEFAULT_CONFIG.showDiagnostics,
+          diagnostics: {
+            ...DEFAULT_CONFIG.diagnostics,
+            ...raw.diagnostics,
+          },
+          sortImportsOnSave: raw.sortImportsOnSave ?? DEFAULT_CONFIG.sortImportsOnSave,
+          sortAttributesOnSave:
+            raw.sortAttributesOnSave ?? DEFAULT_CONFIG.sortAttributesOnSave,
+          sortTypesOnSave: raw.sortTypesOnSave ?? DEFAULT_CONFIG.sortTypesOnSave,
+          sortObjectsOnSave: raw.sortObjectsOnSave ?? DEFAULT_CONFIG.sortObjectsOnSave,
+          sortCssOnSave: raw.sortCssOnSave ?? DEFAULT_CONFIG.sortCssOnSave,
         };
       } catch {
         break;
@@ -53,8 +67,16 @@ function loadConfig(startDir: string): PyramidSortConfig {
   return DEFAULT_CONFIG;
 }
 
+function isDirectory(p: string): boolean {
+  try {
+    return fs.statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 function printUsage() {
-  console.log(`Usage: pyramid-sort <file> [options]
+  console.log(`Usage: pyramid-sort <file-or-dir> [options]
 
 Options:
   --ascending       Force ascending sort direction
@@ -64,7 +86,156 @@ Options:
   --types-only      Sort only types/interfaces/enums
   --objects-only    Sort only object literals
   --css-only        Sort only CSS rule blocks
+  --scan            Scan files for sort issues (Markdown report to stdout)
+  --sort-all        Sort every matching file under a directory (or one file)
+  --all-categories  With --sort-all: sort all categories (ignore sort*OnSave in rc)
+  --check           With --sort-all: do not write; exit 1 if any file would change
+  --out=<path>      Write report or summary to a file (optional)
   --help            Show this help message`);
+}
+
+function normExt(e: string): string {
+  return (e.startsWith('.') ? e : `.${e}`).toLowerCase();
+}
+
+function cfgToPipelineOpts(
+  config: PyramidSortConfig,
+  filePath: string,
+  directionOverride: SortDirection | undefined
+): PipelineSorterOptions {
+  const fileDir = path.dirname(filePath);
+  const aliasPatterns = detectAliasPatterns(fileDir);
+  const maxLineWidth = resolvePrintWidth({
+    override: config.imports.maxLineWidth,
+    searchFromDir: fileDir,
+  });
+  const dir = directionOverride;
+  return {
+    importOpts: {
+      direction: dir ?? config.imports.direction,
+      consolidateMultilineImports: config.imports.consolidateMultilineImports,
+      maxLineWidth,
+      localAliasPatterns: aliasPatterns,
+      groupByEmptyRows: config.imports.groupByEmptyRows,
+      groupExternalLocal: config.imports.groupExternalLocal,
+    },
+    attributeOpts: {
+      direction: dir ?? config.attributes.direction,
+      groupByEmptyRows: config.attributes.groupByEmptyRows,
+    },
+    typeOpts: {
+      direction: dir ?? config.types.direction,
+      groupByEmptyRows: config.types.groupByEmptyRows,
+    },
+    objectOpts: {
+      direction: dir ?? config.objects.direction,
+      groupByEmptyRows: config.objects.groupByEmptyRows,
+      sortNestedObjects: config.objects.sortNestedObjects,
+    },
+    cssOpts: {
+      direction: dir ?? config.css.direction,
+      groupByEmptyRows: config.css.groupByEmptyRows,
+    },
+  };
+}
+
+function resolveCliSortMode(
+  config: PyramidSortConfig,
+  allCategories: boolean,
+  anyOnly: boolean,
+  importsOnly: boolean,
+  attributesOnly: boolean,
+  typesOnly: boolean,
+  objectsOnly: boolean,
+  cssOnly: boolean
+): SortModeFlags {
+  if (anyOnly) {
+    return {
+      imports: importsOnly,
+      attributes: attributesOnly,
+      types: typesOnly,
+      objects: objectsOnly,
+      css: cssOnly,
+    };
+  }
+  if (allCategories) {
+    return {
+      imports: true,
+      attributes: true,
+      types: true,
+      objects: true,
+      css: true,
+    };
+  }
+  return {
+    imports: config.sortImportsOnSave,
+    attributes: config.sortAttributesOnSave,
+    types: config.sortTypesOnSave,
+    objects: config.sortObjectsOnSave,
+    css: config.sortCssOnSave,
+  };
+}
+
+function collectBatchFiles(resolved: string, listExtensions: string[]): string[] {
+  if (isDirectory(resolved)) {
+    return listWorkspaceFiles(resolved, listExtensions);
+  }
+  return [resolved];
+}
+
+function reportRootForRelative(resolved: string): string {
+  return isDirectory(resolved) ? resolved : path.dirname(resolved);
+}
+
+function maybeWriteOut(outPath: string | undefined, content: string) {
+  if (outPath) {
+    fs.writeFileSync(path.resolve(outPath), content, 'utf-8');
+  }
+}
+
+function runSingleFileSort(
+  resolvedPath: string,
+  config: PyramidSortConfig,
+  directionOverride: SortDirection | undefined,
+  anyOnly: boolean,
+  importsOnly: boolean,
+  attributesOnly: boolean,
+  typesOnly: boolean,
+  objectsOnly: boolean,
+  cssOnly: boolean
+) {
+  const ext = path.extname(resolvedPath).toLowerCase();
+  const languageId = SUPPORTED_EXTENSIONS[ext];
+  if (!languageId) {
+    process.exit(0);
+  }
+
+  const allowed = config.extensions.map(normExt);
+  const stylesheet = ['.css', '.scss', '.less'].includes(ext);
+  if (!allowed.includes(ext) && !stylesheet) {
+    process.exit(0);
+  }
+
+  const source = fs.readFileSync(resolvedPath, 'utf-8');
+  const opts = cfgToPipelineOpts(config, resolvedPath, directionOverride);
+  const mode: SortModeFlags = anyOnly
+    ? {
+        imports: importsOnly,
+        attributes: attributesOnly,
+        types: typesOnly,
+        objects: objectsOnly,
+        css: cssOnly,
+      }
+    : {
+        imports: true,
+        attributes: true,
+        types: true,
+        objects: true,
+        css: true,
+      };
+
+  const { result } = sortFileSource(source, languageId, mode, opts);
+  fs.writeFileSync(resolvedPath, result, 'utf-8');
 }
 
 function main() {
@@ -75,34 +246,13 @@ function main() {
     process.exit(0);
   }
 
-  const filePath = args.find((a) => !a.startsWith('--'));
-  if (!filePath) {
-    console.error('Error: No file path provided.');
-    printUsage();
-    process.exit(1);
-  }
+  const outArg = args.find((a) => a.startsWith('--out='));
+  const outPath = outArg ? outArg.slice('--out='.length) : undefined;
 
-  const resolvedPath = path.resolve(filePath);
-  if (!fs.existsSync(resolvedPath)) {
-    console.error(`Error: File not found: ${resolvedPath}`);
-    process.exit(1);
-  }
-
-  const ext = path.extname(resolvedPath).toLowerCase();
-  const languageId = SUPPORTED_EXTENSIONS[ext];
-  if (!languageId) {
-    process.exit(0);
-  }
-
-  const projectRoot = path.dirname(resolvedPath);
-  const config = loadConfig(projectRoot);
-
-  const norm = (e: string) => (e.startsWith('.') ? e : `.${e}`).toLowerCase();
-  const allowed = config.extensions.map(norm);
-  const stylesheet = ['.css', '.scss', '.less'].includes(ext);
-  if (!allowed.includes(ext) && !stylesheet) {
-    process.exit(0);
-  }
+  const scan = args.includes('--scan');
+  const sortAll = args.includes('--sort-all');
+  const check = args.includes('--check');
+  const allCategories = args.includes('--all-categories');
 
   const directionOverride: SortDirection | undefined = args.includes('--ascending')
     ? 'ascending'
@@ -115,117 +265,158 @@ function main() {
   const typesOnly = args.includes('--types-only');
   const objectsOnly = args.includes('--objects-only');
   const cssOnly = args.includes('--css-only');
-
   const anyOnly =
     importsOnly || attributesOnly || typesOnly || objectsOnly || cssOnly;
 
-  let source = fs.readFileSync(resolvedPath, 'utf-8');
-  const languageKind = getLanguageKind(languageId);
-  const lines = source.split('\n');
+  const filePath = args.find((a) => !a.startsWith('--'));
+  if (!filePath) {
+    console.error('Error: No file or directory path provided.');
+    printUsage();
+    process.exit(1);
+  }
 
-  const aliasPatterns = detectAliasPatterns(projectRoot);
+  const resolvedPath = path.resolve(filePath);
+  if (!fs.existsSync(resolvedPath)) {
+    console.error(`Error: Path not found: ${resolvedPath}`);
+    process.exit(1);
+  }
 
-  const dir = directionOverride;
+  const batch = scan || sortAll || isDirectory(resolvedPath);
 
-  const fileDir = path.dirname(resolvedPath);
-  const maxLineWidth = resolvePrintWidth({
-    override: config.imports.maxLineWidth,
-    searchFromDir: fileDir,
-  });
+  if (isDirectory(resolvedPath) && !scan && !sortAll) {
+    console.error('Error: Directory requires --scan or --sort-all.');
+    printUsage();
+    process.exit(1);
+  }
 
-  const impOpts = {
-    direction: dir || config.imports.direction,
-    consolidateMultilineImports: config.imports.consolidateMultilineImports,
-    maxLineWidth,
-    localAliasPatterns: aliasPatterns,
-    groupByEmptyRows: config.imports.groupByEmptyRows,
-    groupExternalLocal: config.imports.groupExternalLocal,
-  };
-
-  const attrOpts = {
-    direction: dir || config.attributes.direction,
-    groupByEmptyRows: config.attributes.groupByEmptyRows,
-  };
-
-  const typeOpts = {
-    direction: dir || config.types.direction,
-    groupByEmptyRows: config.types.groupByEmptyRows,
-  };
-
-  const objectOpts = {
-    direction: dir || config.objects.direction,
-    groupByEmptyRows: config.objects.groupByEmptyRows,
-    sortNestedObjects: config.objects.sortNestedObjects,
-  };
-
-  const cssOpts = {
-    direction: dir || config.css.direction,
-    groupByEmptyRows: config.css.groupByEmptyRows,
-  };
-
-  const runImports = !anyOnly || importsOnly;
-  const runAttrs = !anyOnly || attributesOnly;
-  const runTypes = !anyOnly || typesOnly;
-  const runObjects = !anyOnly || objectsOnly;
-  const runCss = !anyOnly || cssOnly;
-
-  if (['css', 'scss', 'less'].includes(languageId)) {
-    if (runCss) {
-      source = sortCssProperties(source, cssOpts);
-    }
-    fs.writeFileSync(resolvedPath, source, 'utf-8');
+  if (!batch) {
+    const config = loadConfig(path.dirname(resolvedPath));
+    runSingleFileSort(
+      resolvedPath,
+      config,
+      directionOverride,
+      anyOnly,
+      importsOnly,
+      attributesOnly,
+      typesOnly,
+      objectsOnly,
+      cssOnly
+    );
     return;
   }
 
-  if (runImports) {
-    const importRegion = getImportRegion(lines, languageKind);
-    if (importRegion) {
-      const regionLines = lines.slice(importRegion.startLine, importRegion.endLine + 1);
-      const regionText = regionLines.join('\n');
-      const sorted = sortImports(regionText, impOpts);
+  const listConfig = loadConfig(isDirectory(resolvedPath) ? resolvedPath : path.dirname(resolvedPath));
+  const files = collectBatchFiles(resolvedPath, listConfig.extensions);
+  const relRoot = reportRootForRelative(resolvedPath);
 
-      if (sorted !== regionText) {
-        const resultLines = source.split('\n');
-        const sortedLines = sorted.split('\n');
-        resultLines.splice(
-          importRegion.startLine,
-          importRegion.endLine - importRegion.startLine + 1,
-          ...sortedLines
-        );
-        source = resultLines.join('\n');
+  if (scan) {
+    const scanRows: { relativePath: string; scan: ReturnType<typeof scanFile> }[] = [];
+
+    for (const fp of files) {
+      const cfg = loadConfig(path.dirname(fp));
+      const ext = path.extname(fp).toLowerCase();
+      const languageId = SUPPORTED_EXTENSIONS[ext];
+      if (!languageId) continue;
+      const allowed = cfg.extensions.map(normExt);
+      const stylesheet = ['.css', '.scss', '.less'].includes(ext);
+      if (!allowed.includes(ext) && !stylesheet) continue;
+
+      let source: string;
+      try {
+        source = fs.readFileSync(fp, 'utf-8');
+      } catch {
+        continue;
+      }
+
+      const toggles = {
+        showDiagnostics: cfg.showDiagnostics,
+        diagnostics: cfg.diagnostics,
+      };
+      const opts = cfgToPipelineOpts(cfg, fp, directionOverride);
+      const scanResult = scanFile(source, languageId, toggles, opts);
+      scanRows.push({ relativePath: path.relative(relRoot, fp), scan: scanResult });
+    }
+
+    const { markdown, totalIssues } = buildScanReportMarkdown(relRoot, scanRows, files.length);
+    console.log(markdown);
+    maybeWriteOut(outPath, markdown);
+    process.exit(totalIssues > 0 ? 1 : 0);
+  }
+
+  if (sortAll) {
+    if (anyOnly && allCategories) {
+      console.warn('Warning: --all-categories ignored when --*-only flags are set.');
+    }
+
+    const probeMode = resolveCliSortMode(
+      listConfig,
+      allCategories,
+      anyOnly,
+      importsOnly,
+      attributesOnly,
+      typesOnly,
+      objectsOnly,
+      cssOnly
+    );
+    if (
+      !probeMode.imports &&
+      !probeMode.attributes &&
+      !probeMode.types &&
+      !probeMode.objects &&
+      !probeMode.css
+    ) {
+      console.error(
+        'Error: No sort categories enabled. Use --all-categories or set sortImportsOnSave / sortAttributesOnSave / … in .pyramidsortrc.json.'
+      );
+      process.exit(1);
+    }
+
+    const sortRows: { relativePath: string; changed: CategoryChanged }[] = [];
+    let wouldChange = 0;
+
+    for (const fp of files) {
+      const cfg = loadConfig(path.dirname(fp));
+      const ext = path.extname(fp).toLowerCase();
+      const languageId = SUPPORTED_EXTENSIONS[ext];
+      if (!languageId) continue;
+      const allowed = cfg.extensions.map(normExt);
+      const stylesheet = ['.css', '.scss', '.less'].includes(ext);
+      if (!allowed.includes(ext) && !stylesheet) continue;
+
+      let source: string;
+      try {
+        source = fs.readFileSync(fp, 'utf-8');
+      } catch {
+        continue;
+      }
+
+      const mode = resolveCliSortMode(
+        cfg,
+        allCategories,
+        anyOnly,
+        importsOnly,
+        attributesOnly,
+        typesOnly,
+        objectsOnly,
+        cssOnly
+      );
+      const opts = cfgToPipelineOpts(cfg, fp, directionOverride);
+      const { result, changed } = sortFileSource(source, languageId, mode, opts);
+      sortRows.push({ relativePath: path.relative(relRoot, fp), changed });
+
+      const touched =
+        changed.imports || changed.attributes || changed.types || changed.objects || changed.css;
+      if (touched) wouldChange++;
+      if (!check && result !== source) {
+        fs.writeFileSync(fp, result, 'utf-8');
       }
     }
-  }
 
-  if (runAttrs) {
-    const attrRegions = getAttributeRegions(source.split('\n'), languageKind);
-    for (let i = attrRegions.length - 1; i >= 0; i--) {
-      const region = attrRegions[i];
-      const regionLines = source.split('\n').slice(region.startLine, region.endLine + 1);
-      const regionText = regionLines.join('\n');
-      const sorted = sortAllAttributes(regionText, attrOpts);
-      if (sorted !== regionText) {
-        const resultLines = source.split('\n');
-        const sortedLines = sorted.split('\n');
-        resultLines.splice(
-          region.startLine,
-          region.endLine - region.startLine + 1,
-          ...sortedLines
-        );
-        source = resultLines.join('\n');
-      }
-    }
+    const { markdown } = buildSortReportMarkdown(relRoot, files.length, sortRows);
+    console.log(markdown);
+    maybeWriteOut(outPath, markdown);
+    process.exit(check && wouldChange > 0 ? 1 : 0);
   }
-
-  if (runTypes) {
-    source = sortTypeProperties(source, typeOpts);
-  }
-
-  if (runObjects) {
-    source = sortObjectProperties(source, objectOpts);
-  }
-
-  fs.writeFileSync(resolvedPath, source, 'utf-8');
 }
 
 main();

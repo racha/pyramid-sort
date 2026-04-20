@@ -31,7 +31,7 @@ For **imports**, **attributes**, **types**, **objects**, and **CSS**, you can se
 
 ### Editor integration
 
-- **Commands** — Full file, selection, or category-only (imports, attributes, types, objects, CSS, force ascending / descending).
+- **Commands** — Full file, selection, or category-only (imports, attributes, types, objects, CSS, force ascending / descending); **Scan All Files** (Markdown report) and **Sort All Files** (workspace-wide sort + report).
 - **Sort on save** — Separate toggles: imports, attributes, types, objects, CSS (types / objects / CSS are opt-in).
 - **Diagnostics** — Per-category **information** entries in the Problems tab when sort order is off. Imports and attributes report by default; types, objects, and CSS are opt-in; **quick-fix: “Sort with Pyramid Sort”** runs the matching command.
 - **Selection sort** — Heuristic: imports, JSX, type declarations, object patterns, or CSS depending on what the selection looks like.
@@ -213,6 +213,8 @@ const item = {
 | Pyramid Sort: Force Sort Descending | Same, descending                             |
 | Pyramid Sort: Save Without Sorting  | Save the file once without on-save sorting   |
 | Pyramid Sort: Setup AI Hook         | Create hook JSON for the CLI                 |
+| Pyramid Sort: Scan All Files (Report) | Workspace scan; opens Markdown issue report |
+| Pyramid Sort: Sort All Files       | Workspace sort + Markdown summary of changes |
 
 ---
 
@@ -304,6 +306,22 @@ npx pyramid-sort <file> --objects-only
 npx pyramid-sort <file> --css-only
 ```
 
+### Workspace-wide scan and sort
+
+From a project root (or any folder), matching files are collected using **`.pyramidsortrc.json` `extensions`**, the workspace **`.gitignore`**, and the same default skips as the extension (`node_modules`, `.git`, `dist`, `build`, `out`, `coverage`, `.next`, `.turbo`).
+
+```bash
+npx pyramid-sort . --scan
+npx pyramid-sort . --scan --out=pyramid-sort-report.md
+npx pyramid-sort . --sort-all
+npx pyramid-sort . --sort-all --all-categories
+npx pyramid-sort . --sort-all --check
+```
+
+- **`--scan`** — Markdown report on stdout; exit code **1** if any issue is found (handy in CI).
+- **`--sort-all`** — rewrites files in place; respects **`sort*OnSave`** in `.pyramidsortrc.json` unless **`--all-categories`** is set. **`--check`** does not write; exits **1** if any file would change.
+- Per-file settings still come from the nearest `.pyramidsortrc.json` when you use monorepo layouts.
+
 ### `.pyramidsortrc.json`
 
 Example:
@@ -333,11 +351,24 @@ Example:
     "direction": "ascending",
     "groupByEmptyRows": true
   },
-  "extensions": [".js", ".jsx", ".ts", ".tsx", ".css", ".scss"]
+  "extensions": [".js", ".jsx", ".ts", ".tsx", ".css", ".scss"],
+  "showDiagnostics": true,
+  "diagnostics": {
+    "imports": true,
+    "attributes": true,
+    "types": false,
+    "objects": false,
+    "css": false
+  },
+  "sortImportsOnSave": true,
+  "sortAttributesOnSave": true,
+  "sortTypesOnSave": false,
+  "sortObjectsOnSave": false,
+  "sortCssOnSave": false
 }
 ```
 
-`.css` / `.scss` / `.less` files are still processed when the run includes CSS sorting, independent of `extensions`.
+Optional **`showDiagnostics`**, **`diagnostics`**, and **`sort*OnSave`** mirror VS Code settings and control **CLI** `--scan` / `--sort-all` batch behavior. `.css` / `.scss` / `.less` files are still processed when the run includes CSS sorting, independent of `extensions`.
 
 ---
 
@@ -354,7 +385,7 @@ code --install-extension INVEON-Development.pyramid-sort
 ### VSIX
 
 ```bash
-code --install-extension pyramid-sort-0.3.0.vsix
+code --install-extension pyramid-sort-0.4.0.vsix
 ```
 
 ---

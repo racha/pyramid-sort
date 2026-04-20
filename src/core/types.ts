@@ -48,6 +48,15 @@ export interface ForceSortOptions {
   groupByEmptyRows: boolean;
 }
 
+/** Per-category Problems-tab toggles; mirrors `pyramidSort.diagnostics.*`. */
+export interface PyramidSortDiagnosticsConfig {
+  imports: boolean;
+  attributes: boolean;
+  types: boolean;
+  objects: boolean;
+  css: boolean;
+}
+
 export interface PyramidSortConfig {
   imports: ImportSorterOptions;
   attributes: AttributeSorterOptions;
@@ -57,6 +66,16 @@ export interface PyramidSortConfig {
   forceSort: ForceSortOptions;
   /** File extensions (e.g. `.ts`, `.tsx`) the CLI/extension should act on. */
   extensions: string[];
+  /** Master switch for scan / diagnostics (CLI batch scan). Mirrors `pyramidSort.showDiagnostics`. */
+  showDiagnostics: boolean;
+  /** Per-category diagnostic toggles. Mirrors `pyramidSort.diagnostics.*`. */
+  diagnostics: PyramidSortDiagnosticsConfig;
+  /** Batch sort: include imports when true. Mirrors `pyramidSort.sortImportsOnSave`. */
+  sortImportsOnSave: boolean;
+  sortAttributesOnSave: boolean;
+  sortTypesOnSave: boolean;
+  sortObjectsOnSave: boolean;
+  sortCssOnSave: boolean;
 }
 
 export interface ParsedImport {
@@ -149,4 +168,17 @@ export const DEFAULT_CONFIG: PyramidSortConfig = {
     groupByEmptyRows: true,
   },
   extensions: ['.js', '.jsx', '.ts', '.tsx', '.css', '.scss'],
+  showDiagnostics: true,
+  diagnostics: {
+    imports: true,
+    attributes: true,
+    types: false,
+    objects: false,
+    css: false,
+  },
+  sortImportsOnSave: true,
+  sortAttributesOnSave: true,
+  sortTypesOnSave: false,
+  sortObjectsOnSave: false,
+  sortCssOnSave: false,
 };

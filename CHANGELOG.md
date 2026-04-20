@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0] - 2026-04-20
+
+### Added
+
+- **Scan All Files (Report)** command — walks the workspace (respects `pyramidSort.extensions`, root `.gitignore`, and skips `node_modules` / `dist` / etc.), runs the same diagnostics as the Problems tab (`showDiagnostics` + per-category `pyramidSort.diagnostics.*`), and opens a Markdown report.
+- **Sort All Files** command — same walk; quick-pick to use **on-save category toggles** or **sort every category**; applies the shared sort pipeline per file and opens a Markdown summary of what changed. Uses workspace edits so undo works.
+- **CLI** — `pyramid-sort <dir> --scan` (Markdown to stdout; `--out=<path>` optional; exit `1` if any findings), `pyramid-sort <dir> --sort-all` (`--check` dry-run, `--all-categories`, `--out=<path>`). Directory runs require `--scan` or `--sort-all`.
+- **`.pyramidsortrc.json`** — optional `showDiagnostics`, `diagnostics`, and `sortImportsOnSave` / `sortAttributesOnSave` / `sortTypesOnSave` / `sortObjectsOnSave` / `sortCssOnSave` (defaults match VS Code) for batch CLI behavior.
+
+### Changed
+
+- **Shared `sortPipeline`** — extension on-save / full-document sort now delegates to `sortFileSource` so the CLI and VS Code stay aligned (including attribute regions via `sortAttributesInRange`).
+
 ## [0.3.0] - 2026-04-17
 
 ### Added

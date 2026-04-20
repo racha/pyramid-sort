@@ -2,7 +2,7 @@
   "name": "pyramid-sort",
   "displayName": "Pyramid Sort",
   "description": "Sort your imports, attributes, types, objects & CSS by line length — short lines on top, long lines on the bottom. Clean pyramid-shaped code.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "INVEON-Development",
   "license": "MIT",
   "icon": "icon.png",
@@ -111,6 +111,14 @@
       {
         "command": "pyramidSort.setupAIHook",
         "title": "Pyramid Sort: Setup AI Hook"
+      },
+      {
+        "command": "pyramidSort.scanAllFiles",
+        "title": "Pyramid Sort: Scan All Files (Report)"
+      },
+      {
+        "command": "pyramidSort.sortAllFiles",
+        "title": "Pyramid Sort: Sort All Files"
       }
     ],
     "configuration": [
@@ -342,5 +350,8 @@
     "esbuild": "^0.24.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "ignore": "^5.3.2"
   }
 }
