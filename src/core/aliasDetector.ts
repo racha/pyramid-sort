@@ -3,6 +3,14 @@ import * as path from 'path';
 
 const DEFAULT_ALIAS_PATTERNS = ['@/', '~/'];
 
+const TSCONFIG_NAMES = ['tsconfig.json', 'jsconfig.json'] as const;
+const VITE_CONFIG_NAMES = [
+  'vite.config.ts',
+  'vite.config.js',
+  'vite.config.mts',
+  'vite.config.mjs',
+] as const;
+
 /**
  * Extract alias prefixes from tsconfig/jsconfig `compilerOptions.paths`.
  * e.g. `{ "@/*": ["./src/*"] }` yields `["@/"]`.
@@ -60,16 +68,14 @@ function extractViteAliases(configPath: string): string[] {
 export function detectAliasPatterns(workspaceRoot: string): string[] {
   const detected: string[] = [];
 
-  const tsConfigs = ['tsconfig.json', 'jsconfig.json'];
-  for (const name of tsConfigs) {
+  for (const name of TSCONFIG_NAMES) {
     const configPath = path.join(workspaceRoot, name);
     if (fs.existsSync(configPath)) {
       detected.push(...extractPathAliases(configPath));
     }
   }
 
-  const viteConfigs = ['vite.config.ts', 'vite.config.js', 'vite.config.mts', 'vite.config.mjs'];
-  for (const name of viteConfigs) {
+  for (const name of VITE_CONFIG_NAMES) {
     const configPath = path.join(workspaceRoot, name);
     if (fs.existsSync(configPath)) {
       detected.push(...extractViteAliases(configPath));
@@ -77,6 +83,88 @@ export function detectAliasPatterns(workspaceRoot: string): string[] {
   }
 
   return [...new Set([...DEFAULT_ALIAS_PATTERNS, ...detected])];
+}
+
+function normalizeAliasPrefix(p: string): string {
+  if (p.length === 0) return p;
+  return p.endsWith('/') ? p : `${p}/`;
+}
+
+/**
+ * Merge alias patterns from tsconfig/jsconfig/vite in `dir` and every parent
+ * directory up to and including `stopDir` (both resolved). Matches monorepos
+ * where `apps/api/tsconfig.json` defines paths while the workspace root does not.
+ */
+export function collectAliasPatternsFromFileUpward(
+  filePath: string,
+  stopDir: string
+): string[] {
+  const merged = new Set<string>();
+  for (const d of DEFAULT_ALIAS_PATTERNS) merged.add(normalizeAliasPrefix(d));
+
+  let dir = path.dirname(path.resolve(filePath));
+  const stop = path.resolve(stopDir);
+
+  while (true) {
+    for (const name of TSCONFIG_NAMES) {
+      const configPath = path.join(dir, name);
+      if (fs.existsSync(configPath)) {
+        for (const a of extractPathAliases(configPath)) {
+          merged.add(normalizeAliasPrefix(a));
+        }
+      }
+    }
+    for (const name of VITE_CONFIG_NAMES) {
+      const configPath = path.join(dir, name);
+      if (fs.existsSync(configPath)) {
+        for (const a of extractViteAliases(configPath)) {
+          merged.add(normalizeAliasPrefix(a));
+        }
+      }
+    }
+
+    if (dir === stop) break;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+
+  return [...merged];
+}
+
+/**
+ * CLI / headless: walk from the file up to the filesystem root.
+ */
+export function collectAliasPatternsFromFileToFsRoot(filePath: string): string[] {
+  const merged = new Set<string>();
+  for (const d of DEFAULT_ALIAS_PATTERNS) merged.add(normalizeAliasPrefix(d));
+
+  let dir = path.dirname(path.resolve(filePath));
+
+  while (true) {
+    for (const name of TSCONFIG_NAMES) {
+      const configPath = path.join(dir, name);
+      if (fs.existsSync(configPath)) {
+        for (const a of extractPathAliases(configPath)) {
+          merged.add(normalizeAliasPrefix(a));
+        }
+      }
+    }
+    for (const name of VITE_CONFIG_NAMES) {
+      const configPath = path.join(dir, name);
+      if (fs.existsSync(configPath)) {
+        for (const a of extractViteAliases(configPath)) {
+          merged.add(normalizeAliasPrefix(a));
+        }
+      }
+    }
+
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+
+  return [...merged];
 }
 
 /**

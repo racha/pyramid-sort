@@ -1,6 +1,8 @@
 import * as path from 'path';
+import { pathToFileURL } from 'url';
 
-import { CategoryChanged, ScanFileResult } from './sortPipeline';
+import { CategoryChanged } from './sortPipeline';
+import { DiagnosticFinding, PyramidScanBuckets } from '../diagnostics';
 
 export interface CategoryCountTotals {
   imports: number;
@@ -9,16 +11,23 @@ export interface CategoryCountTotals {
   objects: number;
   css: number;
 }
-import { DiagnosticFinding } from '../diagnostics';
 
 export interface ScanReportFileRow {
   relativePath: string;
-  scan: ScanFileResult;
+  /** Absolute path for `file://` links (VS Code / Cursor open-on-click). */
+  absolutePath: string;
+  scan: PyramidScanBuckets;
 }
 
 export interface SortReportFileRow {
   relativePath: string;
+  absolutePath: string;
   changed: CategoryChanged;
+}
+
+function mdFileHref(absolutePath: string, line1Based?: number): string {
+  const base = pathToFileURL(absolutePath).href;
+  return line1Based !== undefined ? `${base}#L${line1Based}` : base;
 }
 
 function formatTimestamp(d = new Date()): string {
@@ -43,7 +52,7 @@ function categoryTitle(code: string): string {
   return map[code] ?? code;
 }
 
-function countScanIssues(scan: ScanFileResult): number {
+function countScanIssues(scan: PyramidScanBuckets): number {
   return (
     scan.imports.length +
     scan.attributes.length +
@@ -53,14 +62,20 @@ function countScanIssues(scan: ScanFileResult): number {
   );
 }
 
-function renderFileFindings(scan: ScanFileResult): string[] {
+function renderFileFindings(scan: PyramidScanBuckets, absolutePath: string): string[] {
   const lines: string[] = [];
 
   const pushList = (items: DiagnosticFinding[]) => {
     for (const f of items) {
       const title = categoryTitle(f.code);
+      const lineStart = f.startLine + 1;
+      const lineHref = mdFileHref(absolutePath, lineStart);
+      const lineLink =
+        f.startLine === f.endLine
+          ? `[line ${lineStart}](${lineHref})`
+          : `[lines ${f.startLine + 1}–${f.endLine + 1}](${lineHref})`;
       lines.push(
-        `- **${title}** · ${findingLineLabel(f)} — ${f.message.replace(/\n/g, ' ')}`
+        `- **${title}** · ${lineLink} — ${f.message.replace(/\n/g, ' ')}`
       );
     }
   };
@@ -88,9 +103,10 @@ export function buildScanReportMarkdown(
     if (n === 0) continue;
     filesWithIssues++;
     totalIssues += n;
-    sections.push(`## ${row.relativePath}`);
+    const fileHref = mdFileHref(row.absolutePath);
+    sections.push(`## [${row.relativePath}](${fileHref})`);
     sections.push('');
-    sections.push(...renderFileFindings(row.scan));
+    sections.push(...renderFileFindings(row.scan, row.absolutePath));
     sections.push('');
   }
 
@@ -171,7 +187,8 @@ export function buildSortReportMarkdown(
 
   for (const r of changedRows) {
     const cats = changedCategories(r.changed).join(', ');
-    lines.push(`- **${r.relativePath}** — ${cats}`);
+    const href = mdFileHref(r.absolutePath);
+    lines.push(`- **[${r.relativePath}](${href})** — ${cats}`);
   }
 
   lines.push('');

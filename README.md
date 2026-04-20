@@ -385,7 +385,7 @@ code --install-extension INVEON-Development.pyramid-sort
 ### VSIX
 
 ```bash
-code --install-extension pyramid-sort-0.4.0.vsix
+code --install-extension pyramid-sort-0.4.2.vsix
 ```
 
 ---

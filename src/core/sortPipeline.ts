@@ -9,18 +9,13 @@ import {
   CssSorterOptions,
   ImportSorterOptions,
   ObjectSorterOptions,
+  PipelineSorterOptions,
   TypeSorterOptions,
 } from './types';
-import {
-  checkAttributes,
-  checkCss,
-  checkImports,
-  checkObjects,
-  checkTypes,
-  DiagnosticFinding,
-} from '../diagnostics';
 
 export const PIPELINE_CSS_LANGS = new Set(['css', 'scss', 'less', 'sass']);
+
+export type { PipelineSorterOptions };
 
 export interface SortModeFlags {
   imports: boolean;
@@ -28,14 +23,6 @@ export interface SortModeFlags {
   types: boolean;
   objects: boolean;
   css: boolean;
-}
-
-export interface PipelineSorterOptions {
-  importOpts: ImportSorterOptions;
-  attributeOpts: AttributeSorterOptions;
-  typeOpts: TypeSorterOptions;
-  objectOpts: ObjectSorterOptions;
-  cssOpts: CssSorterOptions;
 }
 
 export interface CategoryChanged {
@@ -46,33 +33,6 @@ export interface CategoryChanged {
   css: boolean;
 }
 
-export interface ScanToggles {
-  showDiagnostics: boolean;
-  diagnostics: {
-    imports: boolean;
-    attributes: boolean;
-    types: boolean;
-    objects: boolean;
-    css: boolean;
-  };
-}
-
-export interface ScanFileResult {
-  imports: DiagnosticFinding[];
-  attributes: DiagnosticFinding[];
-  types: DiagnosticFinding[];
-  objects: DiagnosticFinding[];
-  css: DiagnosticFinding[];
-}
-
-const EMPTY_SCAN: ScanFileResult = {
-  imports: [],
-  attributes: [],
-  types: [],
-  objects: [],
-  css: [],
-};
-
 function emptyChanged(): CategoryChanged {
   return {
     imports: false,
@@ -81,50 +41,6 @@ function emptyChanged(): CategoryChanged {
     objects: false,
     css: false,
   };
-}
-
-/**
- * Read-only checks for one file; honors the same toggles as the extension Problems tab.
- */
-export function scanFile(
-  source: string,
-  languageId: string,
-  toggles: ScanToggles,
-  opts: PipelineSorterOptions
-): ScanFileResult {
-  if (!toggles.showDiagnostics) {
-    return { ...EMPTY_SCAN };
-  }
-
-  if (PIPELINE_CSS_LANGS.has(languageId)) {
-    if (!toggles.diagnostics.css) {
-      return { ...EMPTY_SCAN };
-    }
-    return {
-      ...EMPTY_SCAN,
-      css: checkCss(source, opts.cssOpts),
-    };
-  }
-
-  const languageKind = getLanguageKind(languageId);
-
-  const out: ScanFileResult = { ...EMPTY_SCAN };
-
-  if (toggles.diagnostics.imports) {
-    const imp = checkImports(source, opts.importOpts);
-    if (imp) out.imports.push(imp);
-  }
-  if (toggles.diagnostics.attributes) {
-    out.attributes.push(...checkAttributes(source, opts.attributeOpts));
-  }
-  if (toggles.diagnostics.types) {
-    out.types.push(...checkTypes(source, opts.typeOpts));
-  }
-  if (toggles.diagnostics.objects) {
-    out.objects.push(...checkObjects(source, opts.objectOpts));
-  }
-
-  return out;
 }
 
 /**

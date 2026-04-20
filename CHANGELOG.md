@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.2] - 2026-04-20
+
+### Fixed
+
+- **Scan report = Problems tab** — Workspace scan and the Problems tab now call the same function (`collectFindingsLikeProblemsTab` in `diagnostics.ts`). There is no separate scan-only logic, so the report cannot diverge from what the editor shows.
+
+## [0.4.1] - 2026-04-20
+
+### Fixed
+
+- **Scan / Sort All Files vs Problems tab** — Workspace scan now uses the **open editor text** when a file is already open (same as diagnostics), instead of always reading from disk, so unsaved buffers are not falsely reported.
+- **Import local vs npm in monorepos** — Alias patterns are collected by walking **from each file’s directory up to the workspace root** (merging every `tsconfig.json` / `jsconfig.json` / Vite config found), not only from the workspace folder. Batch scan and the Problems tab now agree for nested packages (e.g. `apps/api/tsconfig.json` paths).
+- **tsconfig / jsconfig watcher** — Any nested `**/tsconfig.json` or `**/jsconfig.json` change schedules a diagnostics refresh on open files.
+
+### Added
+
+- **Markdown reports** — Section titles and per-issue **line links** use `file://…` URLs (and `#L` line fragments) so you can open the file or jump near the line from the preview.
+
 ## [0.4.0] - 2026-04-20
 
 ### Added

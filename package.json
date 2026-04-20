@@ -2,7 +2,7 @@
   "name": "pyramid-sort",
   "displayName": "Pyramid Sort",
   "description": "Sort your imports, attributes, types, objects & CSS by line length — short lines on top, long lines on the bottom. Clean pyramid-shaped code.",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "publisher": "INVEON-Development",
   "license": "MIT",
   "icon": "icon.png",

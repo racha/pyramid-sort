@@ -1,18 +1,23 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { detectAliasPatterns } from './core/aliasDetector';
+import { collectAliasPatternsFromFileToFsRoot } from './core/aliasDetector';
 import { listWorkspaceFiles } from './core/fileWalker';
-import { buildScanReportMarkdown, buildSortReportMarkdown } from './core/reportBuilder';
 import {
-  CategoryChanged,
-  PipelineSorterOptions,
-  scanFile,
-  sortFileSource,
-  SortModeFlags,
-} from './core/sortPipeline';
+  buildScanReportMarkdown,
+  buildSortReportMarkdown,
+  ScanReportFileRow,
+  SortReportFileRow,
+} from './core/reportBuilder';
+import { PIPELINE_CSS_LANGS, sortFileSource, SortModeFlags } from './core/sortPipeline';
 import { resolvePrintWidth } from './core/printWidth';
-import { DEFAULT_CONFIG, PyramidSortConfig, SortDirection } from './core/types';
+import {
+  DEFAULT_CONFIG,
+  PipelineSorterOptions,
+  PyramidSortConfig,
+  SortDirection,
+} from './core/types';
+import { bucketFindingsForReport, collectFindingsLikeProblemsTab } from './diagnostics';
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
   '.js': 'javascript',
@@ -98,13 +103,23 @@ function normExt(e: string): string {
   return (e.startsWith('.') ? e : `.${e}`).toLowerCase();
 }
 
+/** Mirrors extension `isLanguageSupported` / `getSupportedLanguageIds`. */
+function supportedLanguageIdsFromExtensions(extensions: string[]): Set<string> {
+  const ids = new Set<string>();
+  for (const e of extensions) {
+    const id = SUPPORTED_EXTENSIONS[normExt(e)];
+    if (id) ids.add(id);
+  }
+  return ids;
+}
+
 function cfgToPipelineOpts(
   config: PyramidSortConfig,
   filePath: string,
   directionOverride: SortDirection | undefined
 ): PipelineSorterOptions {
   const fileDir = path.dirname(filePath);
-  const aliasPatterns = detectAliasPatterns(fileDir);
+  const aliasPatterns = collectAliasPatternsFromFileToFsRoot(filePath);
   const maxLineWidth = resolvePrintWidth({
     override: config.imports.maxLineWidth,
     searchFromDir: fileDir,
@@ -310,7 +325,7 @@ function main() {
   const relRoot = reportRootForRelative(resolvedPath);
 
   if (scan) {
-    const scanRows: { relativePath: string; scan: ReturnType<typeof scanFile> }[] = [];
+    const scanRows: ScanReportFileRow[] = [];
 
     for (const fp of files) {
       const cfg = loadConfig(path.dirname(fp));
@@ -328,13 +343,25 @@ function main() {
         continue;
       }
 
-      const toggles = {
-        showDiagnostics: cfg.showDiagnostics,
-        diagnostics: cfg.diagnostics,
-      };
+      const cfgSupportedIds = supportedLanguageIdsFromExtensions(cfg.extensions);
       const opts = cfgToPipelineOpts(cfg, fp, directionOverride);
-      const scanResult = scanFile(source, languageId, toggles, opts);
-      scanRows.push({ relativePath: path.relative(relRoot, fp), scan: scanResult });
+      const runnable =
+        PIPELINE_CSS_LANGS.has(languageId) || cfgSupportedIds.has(languageId);
+      const findings = collectFindingsLikeProblemsTab({
+        source,
+        showDiagnostics: cfg.showDiagnostics,
+        runnable,
+        isCssLanguage: PIPELINE_CSS_LANGS.has(languageId),
+        jsRulesSupported: cfgSupportedIds.has(languageId),
+        toggles: cfg.diagnostics,
+        opts,
+      });
+      const scanResult = bucketFindingsForReport(findings);
+      scanRows.push({
+        relativePath: path.relative(relRoot, fp),
+        absolutePath: fp,
+        scan: scanResult,
+      });
     }
 
     const { markdown, totalIssues } = buildScanReportMarkdown(relRoot, scanRows, files.length);
@@ -371,7 +398,7 @@ function main() {
       process.exit(1);
     }
 
-    const sortRows: { relativePath: string; changed: CategoryChanged }[] = [];
+    const sortRows: SortReportFileRow[] = [];
     let wouldChange = 0;
 
     for (const fp of files) {
@@ -402,7 +429,11 @@ function main() {
       );
       const opts = cfgToPipelineOpts(cfg, fp, directionOverride);
       const { result, changed } = sortFileSource(source, languageId, mode, opts);
-      sortRows.push({ relativePath: path.relative(relRoot, fp), changed });
+      sortRows.push({
+        relativePath: path.relative(relRoot, fp),
+        absolutePath: fp,
+        changed,
+      });
 
       const touched =
         changed.imports || changed.attributes || changed.types || changed.objects || changed.css;

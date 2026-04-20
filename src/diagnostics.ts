@@ -9,6 +9,7 @@ import {
   CssSorterOptions,
   ImportSorterOptions,
   ObjectSorterOptions,
+  PipelineSorterOptions,
   TypeSorterOptions,
 } from './core/types';
 
@@ -273,4 +274,94 @@ function diffRangesToFindings(
     if (r) findings.push({ startLine: r.start, endLine: r.end, message, code });
   }
   return findings;
+}
+
+/** Same inputs the VS Code Problems tab uses; single code path for diagnostics + workspace scan. */
+export interface ProblemsTabRunInput {
+  source: string;
+  showDiagnostics: boolean;
+  /** Extension: `canRunSort(languageId)`. */
+  runnable: boolean;
+  isCssLanguage: boolean;
+  /** Extension: `isLanguageSupported(languageId)` for non-CSS files. */
+  jsRulesSupported: boolean;
+  toggles: {
+    imports: boolean;
+    attributes: boolean;
+    types: boolean;
+    objects: boolean;
+    css: boolean;
+  };
+  opts: PipelineSorterOptions;
+}
+
+/**
+ * Produces the exact same findings as the Problems tab (same branches, same `check*` calls, same options).
+ */
+export function collectFindingsLikeProblemsTab(input: ProblemsTabRunInput): DiagnosticFinding[] {
+  if (!input.showDiagnostics) return [];
+  if (!input.runnable) return [];
+
+  if (input.isCssLanguage) {
+    if (!input.toggles.css) return [];
+    return checkCss(input.source, input.opts.cssOpts);
+  }
+
+  if (!input.jsRulesSupported) return [];
+
+  const out: DiagnosticFinding[] = [];
+  if (input.toggles.imports) {
+    const imp = checkImports(input.source, input.opts.importOpts);
+    if (imp) out.push(imp);
+  }
+  if (input.toggles.attributes) {
+    out.push(...checkAttributes(input.source, input.opts.attributeOpts));
+  }
+  if (input.toggles.types) {
+    out.push(...checkTypes(input.source, input.opts.typeOpts));
+  }
+  if (input.toggles.objects) {
+    out.push(...checkObjects(input.source, input.opts.objectOpts));
+  }
+  return out;
+}
+
+export interface PyramidScanBuckets {
+  imports: DiagnosticFinding[];
+  attributes: DiagnosticFinding[];
+  types: DiagnosticFinding[];
+  objects: DiagnosticFinding[];
+  css: DiagnosticFinding[];
+}
+
+export function bucketFindingsForReport(findings: DiagnosticFinding[]): PyramidScanBuckets {
+  const buckets: PyramidScanBuckets = {
+    imports: [],
+    attributes: [],
+    types: [],
+    objects: [],
+    css: [],
+  };
+  for (const f of findings) {
+    switch (f.code) {
+      case 'pyramidSort.imports':
+        buckets.imports.push(f);
+        break;
+      case 'pyramidSort.attributes':
+        buckets.attributes.push(f);
+        break;
+      case 'pyramidSort.types':
+        buckets.types.push(f);
+        break;
+      case 'pyramidSort.objects':
+        buckets.objects.push(f);
+        break;
+      case 'pyramidSort.css':
+        buckets.css.push(f);
+        break;
+      default:
+        break;
+    }
+  }
+  return buckets;
 }

@@ -43,6 +43,15 @@ export interface CssSorterOptions {
   groupByEmptyRows: boolean;
 }
 
+/** Sorter options bundle for import pipeline + Problems-tab parity checks. */
+export interface PipelineSorterOptions {
+  importOpts: ImportSorterOptions;
+  attributeOpts: AttributeSorterOptions;
+  typeOpts: TypeSorterOptions;
+  objectOpts: ObjectSorterOptions;
+  cssOpts: CssSorterOptions;
+}
+
 export interface ForceSortOptions {
   direction: ResolvedDirection;
   groupByEmptyRows: boolean;

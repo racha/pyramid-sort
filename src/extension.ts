@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-import { detectAliasPatterns } from './core/aliasDetector';
+import { collectAliasPatternsFromFileUpward, detectAliasPatterns } from './core/aliasDetector';
 import { sortAllAttributes } from './core/attributeSorter';
 import { sortCssProperties } from './core/cssSorter';
 import { listWorkspaceFiles } from './core/fileWalker';
@@ -17,13 +17,8 @@ import {
   SortReportFileRow,
 } from './core/reportBuilder';
 import { getLanguageKind } from './core/scopeDetector';
-import {
-  PIPELINE_CSS_LANGS,
-  PipelineSorterOptions,
-  scanFile,
-  sortFileSource,
-  SortModeFlags,
-} from './core/sortPipeline';
+import { PIPELINE_CSS_LANGS, sortFileSource, SortModeFlags } from './core/sortPipeline';
+import { PipelineSorterOptions } from './core/types';
 import { sortTypeProperties } from './core/typeSorter';
 import {
   AttributeSorterOptions,
@@ -35,16 +30,11 @@ import {
   TypeSorterOptions,
 } from './core/types';
 import {
-  checkAttributes,
-  checkCss,
-  checkImports,
-  checkObjects,
-  checkTypes,
+  bucketFindingsForReport,
+  collectFindingsLikeProblemsTab,
   DiagnosticFinding,
 } from './diagnostics';
 
-let cachedAliasPatterns: string[] | null = null;
-let aliasWatcher: vscode.FileSystemWatcher | null = null;
 let diagnosticCollection: vscode.DiagnosticCollection | null = null;
 let diagnosticDebounce: NodeJS.Timeout | undefined;
 let skipNextSave = false;
@@ -76,9 +66,12 @@ function getImportOptions(
   const config = getConfig();
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
 
-  if (!cachedAliasPatterns) {
-    cachedAliasPatterns = workspaceRoot ? detectAliasPatterns(workspaceRoot) : ['@/', '~/'];
-  }
+  const localAliasPatterns =
+    workspaceRoot && resource?.fsPath
+      ? collectAliasPatternsFromFileUpward(resource.fsPath, workspaceRoot)
+      : workspaceRoot
+        ? detectAliasPatterns(workspaceRoot)
+        : ['@/', '~/'];
 
   const override = config.get<number>('imports.maxLineWidth', 0);
   const searchDir = resource?.fsPath
@@ -107,7 +100,7 @@ function getImportOptions(
     direction: directionOverride || config.get<SortDirection>('imports.direction', 'ascending'),
     consolidateMultilineImports: config.get<boolean>('imports.consolidateMultilineImports', true),
     maxLineWidth,
-    localAliasPatterns: cachedAliasPatterns,
+    localAliasPatterns,
     groupByEmptyRows: config.get<boolean>('imports.groupByEmptyRows', true),
     groupExternalLocal: config.get<boolean>('imports.groupExternalLocal', true),
   };
@@ -189,6 +182,19 @@ function canRunSort(languageId: string): boolean {
   return isLanguageSupported(languageId);
 }
 
+/** Prefer the open editor buffer so scan/sort match the Problems tab (unsaved edits). */
+function readSourceForWorkspaceFile(fsPath: string): string {
+  const normalized = path.normalize(path.resolve(fsPath));
+  const doc = vscode.workspace.textDocuments.find(
+    (d) =>
+      !d.isClosed &&
+      d.uri.scheme === 'file' &&
+      path.normalize(path.resolve(d.uri.fsPath)) === normalized
+  );
+  if (doc) return doc.getText();
+  return fs.readFileSync(fsPath, 'utf8');
+}
+
 function languageIdForFsPath(fsPath: string): string | null {
   const ext = path.extname(fsPath).toLowerCase();
   const norm = ext.startsWith('.') ? ext : `.${ext}`;
@@ -253,36 +259,23 @@ function refreshDiagnostics(doc: vscode.TextDocument) {
     return;
   }
 
-  const source = doc.getText();
-  const diags: vscode.Diagnostic[] = [];
+  const findings = collectFindingsLikeProblemsTab({
+    source: doc.getText(),
+    showDiagnostics: true,
+    runnable: true,
+    isCssLanguage: PIPELINE_CSS_LANGS.has(doc.languageId),
+    jsRulesSupported: isLanguageSupported(doc.languageId),
+    toggles: {
+      imports: config.get<boolean>('diagnostics.imports', true),
+      attributes: config.get<boolean>('diagnostics.attributes', true),
+      types: config.get<boolean>('diagnostics.types', false),
+      objects: config.get<boolean>('diagnostics.objects', false),
+      css: config.get<boolean>('diagnostics.css', false),
+    },
+    opts: buildPipelineSorterOptions(undefined, doc.uri),
+  });
 
-  if (PIPELINE_CSS_LANGS.has(doc.languageId)) {
-    if (config.get<boolean>('diagnostics.css', false)) {
-      diags.push(...checkCss(source, getCssOptions()).map((f) => findingToDiagnostic(doc, f)));
-    }
-    diagnosticCollection?.set(doc.uri, diags);
-    return;
-  }
-
-  if (!isLanguageSupported(doc.languageId)) {
-    diagnosticCollection?.delete(doc.uri);
-    return;
-  }
-
-  if (config.get<boolean>('diagnostics.imports', true)) {
-    const imp = checkImports(source, getImportOptions(undefined, doc.uri));
-    if (imp) diags.push(findingToDiagnostic(doc, imp));
-  }
-  if (config.get<boolean>('diagnostics.attributes', true)) {
-    diags.push(...checkAttributes(source, getAttributeOptions()).map((f) => findingToDiagnostic(doc, f)));
-  }
-  if (config.get<boolean>('diagnostics.types', false)) {
-    diags.push(...checkTypes(source, getTypeOptions()).map((f) => findingToDiagnostic(doc, f)));
-  }
-  if (config.get<boolean>('diagnostics.objects', false)) {
-    diags.push(...checkObjects(source, getObjectOptions()).map((f) => findingToDiagnostic(doc, f)));
-  }
-
+  const diags = findings.map((f) => findingToDiagnostic(doc, f));
   diagnosticCollection?.set(doc.uri, diags);
 }
 
@@ -543,16 +536,24 @@ export function activate(context: vscode.ExtensionContext) {
 
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (workspaceRoot) {
-    aliasWatcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(workspaceRoot, '{tsconfig,jsconfig}.json')
-    );
-    const invalidateCache = () => {
-      cachedAliasPatterns = null;
+    const refreshImportDiagnostics = () => {
+      for (const doc of vscode.workspace.textDocuments) {
+        if (doc.uri.scheme === 'file' && canRunSort(doc.languageId)) {
+          scheduleDiagnostics(doc);
+        }
+      }
     };
-    aliasWatcher.onDidChange(invalidateCache);
-    aliasWatcher.onDidCreate(invalidateCache);
-    aliasWatcher.onDidDelete(invalidateCache);
-    context.subscriptions.push(aliasWatcher);
+    const watchJson = (pattern: string) => {
+      const w = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(workspaceRoot, pattern)
+      );
+      w.onDidChange(refreshImportDiagnostics);
+      w.onDidCreate(refreshImportDiagnostics);
+      w.onDidDelete(refreshImportDiagnostics);
+      context.subscriptions.push(w);
+    };
+    watchJson('**/tsconfig.json');
+    watchJson('**/jsconfig.json');
   }
 
   context.subscriptions.push(
@@ -737,14 +738,27 @@ export function activate(context: vscode.ExtensionContext) {
             if (!lang || !canRunSort(lang)) continue;
             let source: string;
             try {
-              source = fs.readFileSync(fp, 'utf8');
+              source = readSourceForWorkspaceFile(fp);
             } catch {
               continue;
             }
             const uri = vscode.Uri.file(fp);
             const opts = buildPipelineSorterOptions(undefined, uri);
-            const scan = scanFile(source, lang, toggles, opts);
-            scanRows.push({ relativePath: path.relative(root, fp), scan });
+            const findings = collectFindingsLikeProblemsTab({
+              source,
+              showDiagnostics: toggles.showDiagnostics,
+              runnable: canRunSort(lang),
+              isCssLanguage: PIPELINE_CSS_LANGS.has(lang),
+              jsRulesSupported: isLanguageSupported(lang),
+              toggles: toggles.diagnostics,
+              opts,
+            });
+            const scan = bucketFindingsForReport(findings);
+            scanRows.push({
+              relativePath: path.relative(root, fp),
+              absolutePath: fp,
+              scan,
+            });
           }
         }
       );
@@ -827,14 +841,18 @@ export function activate(context: vscode.ExtensionContext) {
             if (!lang || !canRunSort(lang)) continue;
             let source: string;
             try {
-              source = fs.readFileSync(fp, 'utf8');
+              source = readSourceForWorkspaceFile(fp);
             } catch {
               continue;
             }
             const uri = vscode.Uri.file(fp);
             const opts = buildPipelineSorterOptions(undefined, uri);
             const { result, changed } = sortFileSource(source, lang, modeFlags, opts);
-            sortRows.push({ relativePath: path.relative(root, fp), changed });
+            sortRows.push({
+              relativePath: path.relative(root, fp),
+              absolutePath: fp,
+              changed,
+            });
             if (result === source) continue;
             const lines = source.split('\n');
             const endLine = Math.max(0, lines.length - 1);
@@ -934,10 +952,5 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-  cachedAliasPatterns = null;
-  if (aliasWatcher) {
-    aliasWatcher.dispose();
-    aliasWatcher = null;
-  }
   diagnosticCollection = null;
 }
