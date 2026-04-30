@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.4] - 2026-04-30
+
+### Fixed
+
+- **Attribute Sorter: Swallowing trailing characters** — Fixed an issue where the attribute sorter would mistakenly swallow trailing characters (such as `{name}` or `</div>`) on the same line after a self-closing tag (e.g. `/>`).
+- **Attribute Sorter: Nested tags** — Fixed an issue where the attribute sorter would not sort the attributes of nested tags within other attributes (e.g. `action={<SortButton ... />}`). The sorter now recursively processes nested tags from the inside out.
+
 ## [0.4.2] - 2026-04-20
 
 ### Fixed

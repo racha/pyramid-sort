@@ -43,8 +43,25 @@ function isBalanced(state: BracketState): boolean {
   return state.depth === 0 && state.stringChar === null;
 }
 
+function splitAtTagClose(text: string): { attrPart: string; closePart: string } | null {
+  let bracketState = createBracketState();
+  for (let i = 0; i < text.length; i++) {
+    bracketState = advanceChar(bracketState, text[i], i > 0 ? text[i - 1] : '');
+    if (isBalanced(bracketState)) {
+      if (text.startsWith('/>', i)) {
+        return { attrPart: text.slice(0, i), closePart: text.slice(i) };
+      }
+      if (text[i] === '>') {
+        return { attrPart: text.slice(0, i), closePart: text.slice(i) };
+      }
+    }
+  }
+  return null;
+}
+
 /**
  * Find all multi-line JSX/HTML opening tags in the source.
+
  * Only processes tags where attributes are already on separate lines.
  */
 export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
@@ -134,32 +151,6 @@ export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
         continue;
       }
 
-      if (attrTrimmed === '>' || attrTrimmed === '/>') {
-        tagClose = attrTrimmed;
-        endLine = i;
-        i++;
-        break;
-      }
-
-      if (attrTrimmed.endsWith('>') || attrTrimmed.endsWith('/>')) {
-        const closeMatch = attrTrimmed.match(/(\/?>)\s*$/);
-        if (closeMatch) {
-          const attrPart = attrTrimmed.slice(0, attrTrimmed.length - closeMatch[1].length).trim();
-          if (attrPart.length > 0) {
-            if (!attrIndent) attrIndent = attrLine.match(/^(\s*)/)?.[1] || '';
-            attributes.push({
-              text: attrPart,
-              sortLength: attrPart.length,
-              originalLines: [attrIndent + attrPart],
-            });
-          }
-          tagClose = closeMatch[1];
-          endLine = i;
-          i++;
-          break;
-        }
-      }
-
       if (!attrIndent) {
         attrIndent = attrLine.match(/^(\s*)/)?.[1] || '';
       }
@@ -185,18 +176,22 @@ export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
         }
       }
 
-      const cleanAttr = fullAttr.replace(/(\/?>)\s*$/, '').trim();
-      const trailingClose = fullAttr.match(/(\/?>)\s*$/);
+      const split = splitAtTagClose(fullAttr);
+      let cleanAttr = fullAttr.trim();
+      let trailingClose = null;
+
+      if (split) {
+        cleanAttr = split.attrPart.trim();
+        trailingClose = [split.closePart];
+      }
 
       if (cleanAttr.length > 0) {
         const rawSourceLines = lines.slice(i, attrEndLine + 1);
-        const lastRawLine = rawSourceLines[rawSourceLines.length - 1];
-        const lastTrailingMatch = lastRawLine.match(/(\/?>)\s*$/);
-        if (lastTrailingMatch) {
-          const stripped = lastRawLine.slice(
-            0,
-            lastRawLine.length - lastTrailingMatch[0].length
-          ).trimEnd();
+        if (split) {
+          const lastRawLine = rawSourceLines[rawSourceLines.length - 1];
+          // Determine where the close part starts in the original line by matching the rest of the string backward
+          // But a simpler approach is to strip the closePart from the end of the last line
+          const stripped = lastRawLine.slice(0, lastRawLine.length - split.closePart.length).trimEnd();
           if (stripped.length > 0) {
             rawSourceLines[rawSourceLines.length - 1] = stripped;
           } else {
@@ -208,10 +203,20 @@ export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
           sortLength: cleanAttr.length,
           originalLines: rawSourceLines,
         });
+
+        // If this attribute spans multiple lines, check for nested tags
+        if (rawSourceLines.length > 1) {
+          const nestedTags = findMultilineTagOpenings(rawSourceLines);
+          for (const nested of nestedTags) {
+            nested.startLine += i;
+            nested.endLine += i;
+            results.push(nested);
+          }
+        }
       }
 
-      if (trailingClose && (trailingClose[1] === '>' || trailingClose[1] === '/>')) {
-        tagClose = trailingClose[1];
+      if (trailingClose) {
+        tagClose = trailingClose[0];
         endLine = attrEndLine;
         i = attrEndLine + 1;
         break;
@@ -278,36 +283,54 @@ function sortAttributeGroup(
  * atomic units.
  */
 export function sortAllAttributes(source: string, options: AttributeSorterOptions): string {
-  const lines = source.split('\n');
-  const tags = findMultilineTagOpenings(lines);
+  let currentSource = source;
+  let changed = true;
+  let iterations = 0;
 
-  if (tags.length === 0) return source;
+  while (changed && iterations < 50) {
+    changed = false;
+    iterations++;
 
-  for (let t = tags.length - 1; t >= 0; t--) {
-    const tag = tags[t];
-    const openerLine = `${tag.tagIndent}${tag.tagOpen}`;
-    const firstLineTexts = tag.attributes
-      .filter((a) => !a.isBlankSeparator)
-      .map((a) => a.originalLines[0] ?? a.text);
-    const dir = resolveDirection(options.direction, openerLine, firstLineTexts);
+    const lines = currentSource.split('\n');
+    const tags = findMultilineTagOpenings(lines);
 
-    const groups = splitAttributesIntoGroups(tag.attributes, options.groupByEmptyRows);
-    const sortedGroups = groups.map((g) => sortAttributeGroup(g, dir));
+    if (tags.length === 0) break;
 
-    const newLines: string[] = [];
-    newLines.push(openerLine);
-    for (let gi = 0; gi < sortedGroups.length; gi++) {
-      if (gi > 0) newLines.push('');
-      for (const attr of sortedGroups[gi]) {
-        newLines.push(...attr.originalLines);
+    // Process from innermost to outermost
+    for (let t = 0; t < tags.length; t++) {
+      const tag = tags[t];
+      const openerLine = `${tag.tagIndent}${tag.tagOpen}`;
+      const firstLineTexts = tag.attributes
+        .filter((a) => !a.isBlankSeparator)
+        .map((a) => a.originalLines[0] ?? a.text);
+      const dir = resolveDirection(options.direction, openerLine, firstLineTexts);
+
+      const groups = splitAttributesIntoGroups(tag.attributes, options.groupByEmptyRows);
+      const sortedGroups = groups.map((g) => sortAttributeGroup(g, dir));
+
+      const newLines: string[] = [];
+      newLines.push(openerLine);
+      for (let gi = 0; gi < sortedGroups.length; gi++) {
+        if (gi > 0) newLines.push('');
+        for (const attr of sortedGroups[gi]) {
+          newLines.push(...attr.originalLines);
+        }
+      }
+      newLines.push(`${tag.tagIndent}${tag.tagClose}`);
+
+      const oldLinesText = lines.slice(tag.startLine, tag.endLine + 1).join('\n');
+      const newLinesText = newLines.join('\n');
+
+      if (oldLinesText !== newLinesText) {
+        lines.splice(tag.startLine, tag.endLine - tag.startLine + 1, ...newLines);
+        currentSource = lines.join('\n');
+        changed = true;
+        break; // break the loop and re-parse the source
       }
     }
-    newLines.push(`${tag.tagIndent}${tag.tagClose}`);
-
-    lines.splice(tag.startLine, tag.endLine - tag.startLine + 1, ...newLines);
   }
 
-  return lines.join('\n');
+  return currentSource;
 }
 
 /**
