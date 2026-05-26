@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.5] - 2026-05-26
+
+### Added
+
+- **Cursor Rules integration** — The "Setup AI Hook" command has been updated to "Setup AI Hook & Cursor Rules". It now creates `.cursor/rules/pyramid-sort.mdc` so that Cursor agents know exactly how to run Pyramid Sort formatting across the workspace using the CLI.
+
+### Fixed
+
+- **Sort All Files autosave** — Running the "Sort All Files" command now automatically saves the modified files instead of leaving them in an unsaved/dirty state.
+
 ## [0.4.4] - 2026-04-30
 
 ### Fixed

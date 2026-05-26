@@ -113,7 +113,7 @@
       },
       {
         "command": "pyramidSort.setupAIHook",
-        "title": "Pyramid Sort: Setup AI Hook"
+        "title": "Pyramid Sort: Setup AI Hook & Cursor Rules"
       },
       {
         "command": "pyramidSort.scanAllFiles",

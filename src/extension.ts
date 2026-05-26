@@ -863,7 +863,19 @@ export function activate(context: vscode.ExtensionContext) {
             );
             batch.replace(uri, fullRange, result);
           }
-          await vscode.workspace.applyEdit(batch);
+          const success = await vscode.workspace.applyEdit(batch);
+          if (success) {
+            for (const row of sortRows) {
+              if (row.changed) {
+                try {
+                  const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(row.absolutePath));
+                  if (doc.isDirty) await doc.save();
+                } catch {
+                  // ignore
+                }
+              }
+            }
+          }
         }
       );
 
@@ -887,21 +899,49 @@ export function activate(context: vscode.ExtensionContext) {
       const hooksDir = path.join(wsRoot, '.github', 'hooks');
       const hookFile = path.join(hooksDir, 'pyramid-sort.json');
 
-      if (fs.existsSync(hookFile)) {
-        const overwrite = await vscode.window.showWarningMessage(
-          'AI hook config already exists. Overwrite?',
-          'Yes',
-          'No'
-        );
-        if (overwrite !== 'Yes') return;
+      let createdFiles = [];
+
+      if (!fs.existsSync(hookFile)) {
+        fs.mkdirSync(hooksDir, { recursive: true });
+        fs.writeFileSync(hookFile, AI_HOOK_CONFIG, 'utf-8');
+        createdFiles.push('.github/hooks/pyramid-sort.json');
       }
 
-      fs.mkdirSync(hooksDir, { recursive: true });
-      fs.writeFileSync(hookFile, AI_HOOK_CONFIG, 'utf-8');
-      vscode.window.showInformationMessage('Created .github/hooks/pyramid-sort.json');
+      const cursorRulesDir = path.join(wsRoot, '.cursor', 'rules');
+      const cursorRuleFile = path.join(cursorRulesDir, 'pyramid-sort.mdc');
+      if (!fs.existsSync(cursorRuleFile)) {
+        fs.mkdirSync(cursorRulesDir, { recursive: true });
+        fs.writeFileSync(
+          cursorRuleFile,
+          `---
+description: Run Pyramid Sort formatter
+globs: *.{ts,tsx,js,jsx,css,scss,vue,svelte,astro,html,mdx}
+---
+When asked to format or sort the codebase using Pyramid Sort, or after making large structural changes to imports or attributes, you can run the following shell command to sort the entire workspace:
 
-      const doc = await vscode.workspace.openTextDocument(hookFile);
-      await vscode.window.showTextDocument(doc);
+\`\`\`bash
+npx pyramid-sort . --sort-all
+\`\`\`
+
+To scan the workspace for issues without fixing them, run:
+\`\`\`bash
+npx pyramid-sort . --scan
+\`\`\`
+`,
+          'utf-8'
+        );
+        createdFiles.push('.cursor/rules/pyramid-sort.mdc');
+      }
+
+      if (createdFiles.length > 0) {
+        vscode.window.showInformationMessage(`Created AI configs: ${createdFiles.join(', ')}`);
+        const doc = await vscode.workspace.openTextDocument(
+          path.join(wsRoot, createdFiles[createdFiles.length - 1])
+        );
+        await vscode.window.showTextDocument(doc);
+      } else {
+        vscode.window.showInformationMessage('AI configs already exist.');
+      }
     })
   );
 
