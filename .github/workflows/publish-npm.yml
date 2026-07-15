@@ -1,11 +1,11 @@
 # Publishes to https://www.npmjs.com/package/pyramid-sort
 #
 # Setup (one-time):
-# 1. npmjs.com → Access Tokens → Generate New Token → Granular Token
-#    - Permissions: Read and write, Packages only, pyramid-sort
-#    - Or "Automation" for classic bypass of 2FA on publish
-# 2. GitHub repo → Settings → Secrets and variables → Actions → New repository secret
-#    - Name: NPM_TOKEN   Value: the token (starts with npm_)
+# npmjs.com → pyramid-sort → Settings → Trusted Publisher
+#   - Repository owner: racha
+#   - Repository: pyramid-sort
+#   - Workflow filename: publish-npm.yml
+#   - Permissions: npm publish
 #
 # Then either push a semver tag (v1.2.3), or run this workflow manually (Actions tab).
 
@@ -28,13 +28,12 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
           cache: npm
 
+      - run: npm install --global npm@latest
       - run: npm ci
 
       - name: Publish package
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
