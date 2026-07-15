@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.6] - 2026-07-15
+
+### Added
+
+- **Spread-aware attribute groups** — Added `pyramidSort.attributes.skipGroupsWithSpread` to leave any attribute group containing a JSX spread completely unchanged.
+
+### Fixed
+
+- **JSX spread override safety** — Spread attributes such as `{...props}` and `{...rest}` now remain fixed boundaries. Named attributes are sorted only within each side of a spread, so they can never cross it and change override behavior.
+
 ## [0.4.5] - 2026-05-26
 
 ### Added

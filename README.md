@@ -237,6 +237,7 @@ In the VS Code Settings editor, options are grouped into sections: **Pyramid Sor
 | `pyramidSort.imports.groupByEmptyRows`            | boolean  | `true`      | Blank lines separate import groups                                                                                                          |
 | `pyramidSort.imports.groupExternalLocal`          | boolean  | `true`      | Auto-group imports into external (npm) vs local (relative / alias) with a blank line between them; **false** = pure length sort, one block |
 | `pyramidSort.attributes.groupByEmptyRows`         | boolean  | `true`      | Blank lines separate attribute groups in a tag                                                                                              |
+| `pyramidSort.attributes.skipGroupsWithSpread`     | boolean  | `false`     | Leave an attribute group unchanged when it contains a JSX spread; otherwise spreads remain fixed boundaries while each side is sorted       |
 | `pyramidSort.types.groupByEmptyRows`              | boolean  | `true`      | Blank lines separate groups inside type bodies                                                                                              |
 | `pyramidSort.objects.groupByEmptyRows`            | boolean  | `true`      | Blank lines separate groups inside object literals                                                                                          |
 | `pyramidSort.objects.sortNestedObjects`           | boolean  | `false`     | Also sort `name({ … })` and nested `prop: { … }`; keeps multi-line nested objects intact                                                    |
@@ -336,7 +337,8 @@ Example:
   },
   "attributes": {
     "direction": "ascending",
-    "groupByEmptyRows": true
+    "groupByEmptyRows": true,
+    "skipGroupsWithSpread": false
   },
   "types": {
     "direction": "ascending",

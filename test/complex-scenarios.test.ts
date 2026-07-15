@@ -514,7 +514,9 @@ describe('complex JSX attributes', () => {
 
     const lines = out.split('\n');
     const attrLines = lines.filter((l) => /^\s{2,}\S/.test(l) && !l.trim().startsWith('/>'));
-    const lengths = attrLines.map((l) => l.trimEnd().length);
+    expect(attrLines[0].trim()).toBe('{...register("email")}');
+
+    const lengths = attrLines.slice(1).map((l) => l.trimEnd().length);
     for (let i = 1; i < lengths.length; i++) {
       expect(lengths[i]).toBeGreaterThanOrEqual(lengths[i - 1]);
     }

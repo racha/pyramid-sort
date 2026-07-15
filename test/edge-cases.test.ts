@@ -195,7 +195,7 @@ describe('edge case: JSX peculiarities', () => {
     expect(out).toBe(src);
   });
 
-  it('JSX with a spread attribute and named attributes sorts correctly', () => {
+  it('keeps a leading JSX spread before sorted named attributes', () => {
     const src = [
       '<Button',
       '  {...rest}',
@@ -206,10 +206,14 @@ describe('edge case: JSX peculiarities', () => {
     ].join('\n');
 
     const out = sortAllAttributes(src, attrOpts);
-    expect(out).toContain('{...rest}');
-    expect(out).toContain('id="x"');
-    expect(out).toContain('className="primary"');
-    expect(out).toContain('onClick={handleClick}');
+    expect(out).toBe([
+      '<Button',
+      '  {...rest}',
+      '  id="x"',
+      '  className="primary"',
+      '  onClick={handleClick}',
+      '/>',
+    ].join('\n'));
   });
 
   it('JSX attribute whose value is nested JSX stays intact', () => {

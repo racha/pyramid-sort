@@ -111,6 +111,7 @@ function getAttributeOptions(directionOverride?: SortDirection): AttributeSorter
   return {
     direction: directionOverride || config.get<SortDirection>('attributes.direction', 'ascending'),
     groupByEmptyRows: config.get<boolean>('attributes.groupByEmptyRows', true),
+    skipGroupsWithSpread: config.get<boolean>('attributes.skipGroupsWithSpread', false),
   };
 }
 

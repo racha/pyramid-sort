@@ -11,6 +11,10 @@ interface BracketState {
   templateDepth: number;
 }
 
+function isSpreadAttribute(text: string): boolean {
+  return /^\{\s*\.\.\.[\s\S]*\}$/.test(text.trim());
+}
+
 function createBracketState(): BracketState {
   return { depth: 0, stringChar: null, templateDepth: 0 };
 }
@@ -130,6 +134,7 @@ export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
           text: trimmedAttr,
           sortLength: trimmedAttr.length,
           originalLines: [attrIndent + trimmedAttr],
+          isSpread: isSpreadAttribute(trimmedAttr),
         });
       }
     }
@@ -202,6 +207,7 @@ export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
           text: cleanAttr,
           sortLength: cleanAttr.length,
           originalLines: rawSourceLines,
+          isSpread: isSpreadAttribute(cleanAttr),
         });
 
         // If this attribute spans multiple lines, check for nested tags
@@ -271,10 +277,26 @@ function sortAttributeGroup(
   group: ParsedAttribute[],
   direction: ResolvedDirection
 ): ParsedAttribute[] {
-  return [...group].sort((a, b) => {
+  const sortSegment = (segment: ParsedAttribute[]) => [...segment].sort((a, b) => {
     const diff = a.sortLength - b.sortLength;
     return direction === 'ascending' ? diff : -diff;
   });
+
+  const sorted: ParsedAttribute[] = [];
+  let segment: ParsedAttribute[] = [];
+
+  for (const attribute of group) {
+    if (!attribute.isSpread) {
+      segment.push(attribute);
+      continue;
+    }
+
+    sorted.push(...sortSegment(segment), attribute);
+    segment = [];
+  }
+
+  sorted.push(...sortSegment(segment));
+  return sorted;
 }
 
 /**
@@ -306,7 +328,11 @@ export function sortAllAttributes(source: string, options: AttributeSorterOption
       const dir = resolveDirection(options.direction, openerLine, firstLineTexts);
 
       const groups = splitAttributesIntoGroups(tag.attributes, options.groupByEmptyRows);
-      const sortedGroups = groups.map((g) => sortAttributeGroup(g, dir));
+      const sortedGroups = groups.map((group) =>
+        options.skipGroupsWithSpread && group.some((attribute) => attribute.isSpread)
+          ? group
+          : sortAttributeGroup(group, dir)
+      );
 
       const newLines: string[] = [];
       newLines.push(openerLine);

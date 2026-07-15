@@ -24,6 +24,8 @@ export interface ImportSorterOptions {
 export interface AttributeSorterOptions {
   direction: SortDirection;
   groupByEmptyRows: boolean;
+  /** When true, leave an attribute group unchanged if it contains a JSX spread attribute. */
+  skipGroupsWithSpread?: boolean;
 }
 
 export interface TypeSorterOptions {
@@ -120,6 +122,8 @@ export interface ParsedAttribute {
   originalLines: string[];
   /** True when this entry represents a blank-line separator between attribute groups. */
   isBlankSeparator?: boolean;
+  /** True when this entry is a JSX spread attribute such as `{...props}`. */
+  isSpread?: boolean;
 }
 
 export interface TagWithAttributes {
@@ -158,6 +162,7 @@ export const DEFAULT_CONFIG: PyramidSortConfig = {
   attributes: {
     direction: 'ascending',
     groupByEmptyRows: true,
+    skipGroupsWithSpread: false,
   },
   types: {
     direction: 'ascending',

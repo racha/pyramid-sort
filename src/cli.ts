@@ -137,6 +137,7 @@ function cfgToPipelineOpts(
     attributeOpts: {
       direction: dir ?? config.attributes.direction,
       groupByEmptyRows: config.attributes.groupByEmptyRows,
+      skipGroupsWithSpread: config.attributes.skipGroupsWithSpread,
     },
     typeOpts: {
       direction: dir ?? config.types.direction,

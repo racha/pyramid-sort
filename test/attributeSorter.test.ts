@@ -15,6 +15,11 @@ const auto: AttributeSorterOptions = {
   direction: 'auto',
   groupByEmptyRows: true,
 };
+const skipSpreadGroups: AttributeSorterOptions = {
+  direction: 'ascending',
+  groupByEmptyRows: true,
+  skipGroupsWithSpread: true,
+};
 
 describe('findMultilineTagOpenings', () => {
   it('detects a multi-line JSX element', () => {
@@ -182,6 +187,80 @@ describe('sortAllAttributes', () => {
     const result = sortAllAttributes(source, ascending);
     expect(result).toContain('<div');
     expect(result).toContain('<input');
+  });
+
+  it('keeps spread attributes in place and sorts only on each side', () => {
+    const source = [
+      '<Button',
+      '  veryLongBefore="value"',
+      '  id="x"',
+      '  {...props}',
+      '  onClick={handleClick}',
+      '  className="primary"',
+      '/>',
+    ].join('\n');
+
+    expect(sortAllAttributes(source, ascending)).toBe([
+      '<Button',
+      '  id="x"',
+      '  veryLongBefore="value"',
+      '  {...props}',
+      '  className="primary"',
+      '  onClick={handleClick}',
+      '/>',
+    ].join('\n'));
+  });
+
+  it('keeps multiple spread boundaries intact', () => {
+    const source = [
+      '<Component',
+      '  longerBefore="value"',
+      '  id="x"',
+      '  {...defaults}',
+      '  longerMiddle="value"',
+      '  key="x"',
+      '  {...overrides}',
+      '  longestAfter="value"',
+      '  ref={ref}',
+      '/>',
+    ].join('\n');
+
+    expect(sortAllAttributes(source, ascending)).toBe([
+      '<Component',
+      '  id="x"',
+      '  longerBefore="value"',
+      '  {...defaults}',
+      '  key="x"',
+      '  longerMiddle="value"',
+      '  {...overrides}',
+      '  ref={ref}',
+      '  longestAfter="value"',
+      '/>',
+    ].join('\n'));
+  });
+
+  it('can skip only attribute groups that contain a spread', () => {
+    const source = [
+      '<Button',
+      '  onClick={handleClick}',
+      '  {...props}',
+      '  id="x"',
+      '',
+      '  className="primary"',
+      '  type="button"',
+      '/>',
+    ].join('\n');
+
+    expect(sortAllAttributes(source, skipSpreadGroups)).toBe([
+      '<Button',
+      '  onClick={handleClick}',
+      '  {...props}',
+      '  id="x"',
+      '',
+      '  type="button"',
+      '  className="primary"',
+      '/>',
+    ].join('\n'));
   });
 
   it('auto direction matches ascending for a short tag opener', () => {
