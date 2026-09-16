@@ -5,11 +5,16 @@ import * as vscode from 'vscode';
 import { collectAliasPatternsFromFileUpward, detectAliasPatterns } from './core/aliasDetector';
 import { sortAllAttributes } from './core/attributeSorter';
 import { sortCssProperties } from './core/cssSorter';
-import { listWorkspaceFiles } from './core/fileWalker';
+import { isPyramidSortIgnored, listWorkspaceFiles } from './core/fileWalker';
 import { sortLinesWithGrouping } from './core/groupSort';
 import { sortImports } from './core/importSorter';
 import { sortObjectProperties } from './core/objectSorter';
 import { resolvePrintWidth } from './core/printWidth';
+import {
+  mergeAliasPatterns,
+  mergePyramidSortConfig,
+  resolvePyramidSortConfig,
+} from './core/configLoader';
 import {
   buildScanReportMarkdown,
   buildSortReportMarkdown,
@@ -18,7 +23,7 @@ import {
 } from './core/reportBuilder';
 import { getLanguageKind } from './core/scopeDetector';
 import { PIPELINE_CSS_LANGS, sortFileSource, SortModeFlags } from './core/sortPipeline';
-import { PipelineSorterOptions } from './core/types';
+import { PipelineSorterOptions, PyramidSortConfig } from './core/types';
 import { sortTypeProperties } from './core/typeSorter';
 import {
   AttributeSorterOptions,
@@ -59,21 +64,99 @@ function getConfig() {
   return vscode.workspace.getConfiguration('pyramidSort');
 }
 
+function vscodeLayerFromConfig(): Partial<PyramidSortConfig> {
+  const config = getConfig();
+  return {
+    imports: {
+      direction: config.get<SortDirection>('imports.direction', 'ascending'),
+      consolidateMultilineImports: config.get<boolean>('imports.consolidateMultilineImports', true),
+      maxLineWidth: config.get<number>('imports.maxLineWidth', 0),
+      localAliasPatterns: config.get<string[]>('imports.localAliasPatterns', ['@/', '~/']),
+      groupByEmptyRows: config.get<boolean>('imports.groupByEmptyRows', true),
+      groupExternalLocal: config.get<boolean>('imports.groupExternalLocal', true),
+    },
+    attributes: {
+      direction: config.get<SortDirection>('attributes.direction', 'ascending'),
+      groupByEmptyRows: config.get<boolean>('attributes.groupByEmptyRows', true),
+      skipGroupsWithSpread: config.get<boolean>('attributes.skipGroupsWithSpread', false),
+    },
+    types: {
+      direction: config.get<SortDirection>('types.direction', 'ascending'),
+      groupByEmptyRows: config.get<boolean>('types.groupByEmptyRows', true),
+    },
+    objects: {
+      direction: config.get<SortDirection>('objects.direction', 'ascending'),
+      groupByEmptyRows: config.get<boolean>('objects.groupByEmptyRows', true),
+      sortNestedObjects: config.get<boolean>('objects.sortNestedObjects', false),
+    },
+    css: {
+      direction: config.get<SortDirection>('css.direction', 'ascending'),
+      groupByEmptyRows: config.get<boolean>('css.groupByEmptyRows', true),
+    },
+    forceSort: {
+      direction: 'ascending',
+      groupByEmptyRows: config.get<boolean>('forceSort.groupByEmptyRows', true),
+    },
+    extensions: config.get<string[]>('extensions', [
+      '.js',
+      '.jsx',
+      '.ts',
+      '.tsx',
+      '.css',
+      '.scss',
+    ]),
+    showDiagnostics: config.get<boolean>('showDiagnostics', true),
+    diagnostics: {
+      imports: config.get<boolean>('diagnostics.imports', true),
+      attributes: config.get<boolean>('diagnostics.attributes', true),
+      types: config.get<boolean>('diagnostics.types', false),
+      objects: config.get<boolean>('diagnostics.objects', false),
+      css: config.get<boolean>('diagnostics.css', false),
+    },
+    sortImportsOnSave: config.get<boolean>('sortImportsOnSave', true),
+    sortAttributesOnSave: config.get<boolean>('sortAttributesOnSave', true),
+    sortTypesOnSave: config.get<boolean>('sortTypesOnSave', false),
+    sortObjectsOnSave: config.get<boolean>('sortObjectsOnSave', false),
+    sortCssOnSave: config.get<boolean>('sortCssOnSave', false),
+  };
+}
+
+function startDirFor(resource?: vscode.Uri): string | null {
+  if (!resource || resource.scheme !== 'file' || !resource.fsPath) return null;
+  const p = resource.fsPath;
+  try {
+    if (fs.existsSync(p) && fs.statSync(p).isDirectory()) return p;
+  } catch {
+    // treat as a file path
+  }
+  return path.dirname(p);
+}
+
+function resolveConfigFor(resource?: vscode.Uri): PyramidSortConfig {
+  const vscodeLayer = vscodeLayerFromConfig();
+  const startDir = startDirFor(resource);
+  if (!startDir) return mergePyramidSortConfig(vscodeLayer);
+  return resolvePyramidSortConfig(startDir, vscodeLayer);
+}
+
 function getImportOptions(
   directionOverride?: SortDirection,
   resource?: vscode.Uri
 ): ImportSorterOptions {
-  const config = getConfig();
+  const resolved = resolveConfigFor(resource);
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
 
-  const localAliasPatterns =
+  const detectedAliases =
     workspaceRoot && resource?.fsPath
       ? collectAliasPatternsFromFileUpward(resource.fsPath, workspaceRoot)
       : workspaceRoot
         ? detectAliasPatterns(workspaceRoot)
         : ['@/', '~/'];
+  const localAliasPatterns = mergeAliasPatterns(
+    detectedAliases,
+    resolved.imports.localAliasPatterns
+  );
 
-  const override = config.get<number>('imports.maxLineWidth', 0);
   const searchDir = resource?.fsPath
     ? path.dirname(resource.fsPath)
     : workspaceRoot || '';
@@ -88,7 +171,7 @@ function getImportOptions(
   const ruler = rulers.length > 0 ? rulers[0] : undefined;
 
   const maxLineWidth = resolvePrintWidth({
-    override,
+    override: resolved.imports.maxLineWidth,
     searchFromDir: searchDir || workspaceRoot || process.cwd(),
     workspaceRoot: workspaceRoot || undefined,
     vscodePrettierPrintWidth:
@@ -97,54 +180,66 @@ function getImportOptions(
   });
 
   return {
-    direction: directionOverride || config.get<SortDirection>('imports.direction', 'ascending'),
-    consolidateMultilineImports: config.get<boolean>('imports.consolidateMultilineImports', true),
+    direction: directionOverride || resolved.imports.direction,
+    consolidateMultilineImports: resolved.imports.consolidateMultilineImports,
     maxLineWidth,
     localAliasPatterns,
-    groupByEmptyRows: config.get<boolean>('imports.groupByEmptyRows', true),
-    groupExternalLocal: config.get<boolean>('imports.groupExternalLocal', true),
+    groupByEmptyRows: resolved.imports.groupByEmptyRows,
+    groupExternalLocal: resolved.imports.groupExternalLocal,
   };
 }
 
-function getAttributeOptions(directionOverride?: SortDirection): AttributeSorterOptions {
-  const config = getConfig();
+function getAttributeOptions(
+  directionOverride?: SortDirection,
+  resource?: vscode.Uri
+): AttributeSorterOptions {
+  const resolved = resolveConfigFor(resource);
   return {
-    direction: directionOverride || config.get<SortDirection>('attributes.direction', 'ascending'),
-    groupByEmptyRows: config.get<boolean>('attributes.groupByEmptyRows', true),
-    skipGroupsWithSpread: config.get<boolean>('attributes.skipGroupsWithSpread', false),
+    direction: directionOverride || resolved.attributes.direction,
+    groupByEmptyRows: resolved.attributes.groupByEmptyRows,
+    skipGroupsWithSpread: resolved.attributes.skipGroupsWithSpread,
   };
 }
 
-function getTypeOptions(directionOverride?: SortDirection): TypeSorterOptions {
-  const config = getConfig();
+function getTypeOptions(
+  directionOverride?: SortDirection,
+  resource?: vscode.Uri
+): TypeSorterOptions {
+  const resolved = resolveConfigFor(resource);
   return {
-    direction: directionOverride || config.get<SortDirection>('types.direction', 'ascending'),
-    groupByEmptyRows: config.get<boolean>('types.groupByEmptyRows', true),
+    direction: directionOverride || resolved.types.direction,
+    groupByEmptyRows: resolved.types.groupByEmptyRows,
   };
 }
 
-function getObjectOptions(directionOverride?: SortDirection): ObjectSorterOptions {
-  const config = getConfig();
+function getObjectOptions(
+  directionOverride?: SortDirection,
+  resource?: vscode.Uri
+): ObjectSorterOptions {
+  const resolved = resolveConfigFor(resource);
   return {
-    direction: directionOverride || config.get<SortDirection>('objects.direction', 'ascending'),
-    groupByEmptyRows: config.get<boolean>('objects.groupByEmptyRows', true),
-    sortNestedObjects: config.get<boolean>('objects.sortNestedObjects', false),
+    direction: directionOverride || resolved.objects.direction,
+    groupByEmptyRows: resolved.objects.groupByEmptyRows,
+    sortNestedObjects: resolved.objects.sortNestedObjects,
   };
 }
 
-function getCssOptions(directionOverride?: SortDirection): CssSorterOptions {
-  const config = getConfig();
+function getCssOptions(
+  directionOverride?: SortDirection,
+  resource?: vscode.Uri
+): CssSorterOptions {
+  const resolved = resolveConfigFor(resource);
   return {
-    direction: directionOverride || config.get<SortDirection>('css.direction', 'ascending'),
-    groupByEmptyRows: config.get<boolean>('css.groupByEmptyRows', true),
+    direction: directionOverride || resolved.css.direction,
+    groupByEmptyRows: resolved.css.groupByEmptyRows,
   };
 }
 
-function getForceSortOptions(direction: ResolvedDirection) {
-  const config = getConfig();
+function getForceSortOptions(direction: ResolvedDirection, resource?: vscode.Uri) {
+  const resolved = resolveConfigFor(resource);
   return {
     direction,
-    groupByEmptyRows: config.get<boolean>('forceSort.groupByEmptyRows', true),
+    groupByEmptyRows: resolved.forceSort.groupByEmptyRows,
   };
 }
 
@@ -156,15 +251,7 @@ interface SortMode {
   css?: boolean;
 }
 
-function getSupportedLanguageIds(): string[] {
-  const exts = getConfig().get<string[]>('extensions', [
-    '.js',
-    '.jsx',
-    '.ts',
-    '.tsx',
-    '.css',
-    '.scss',
-  ]);
+function languageIdsFromExtensions(exts: string[]): string[] {
   const ids = new Set<string>();
   for (const e of exts) {
     const norm = e.startsWith('.') ? e : `.${e}`;
@@ -174,13 +261,21 @@ function getSupportedLanguageIds(): string[] {
   return [...ids];
 }
 
-function isLanguageSupported(languageId: string): boolean {
-  return getSupportedLanguageIds().includes(languageId);
+function getSupportedLanguageIds(resource?: vscode.Uri): string[] {
+  return languageIdsFromExtensions(resolveConfigFor(resource).extensions);
 }
 
-function canRunSort(languageId: string): boolean {
+function isLanguageSupported(languageId: string, resource?: vscode.Uri): boolean {
+  return getSupportedLanguageIds(resource).includes(languageId);
+}
+
+function canRunSort(languageId: string, resource?: vscode.Uri): boolean {
   if (PIPELINE_CSS_LANGS.has(languageId)) return true;
-  return isLanguageSupported(languageId);
+  return isLanguageSupported(languageId, resource);
+}
+
+function isResourceIgnored(resource?: vscode.Uri): boolean {
+  return !!resource && resource.scheme === 'file' && isPyramidSortIgnored(resource.fsPath);
 }
 
 /** Prefer the open editor buffer so scan/sort match the Problems tab (unsaved edits). */
@@ -208,14 +303,17 @@ function buildPipelineSorterOptions(
 ): PipelineSorterOptions {
   return {
     importOpts: getImportOptions(directionOverride, resource),
-    attributeOpts: getAttributeOptions(directionOverride),
-    typeOpts: getTypeOptions(directionOverride),
-    objectOpts: getObjectOptions(directionOverride),
-    cssOpts: getCssOptions(directionOverride),
+    attributeOpts: getAttributeOptions(directionOverride, resource),
+    typeOpts: getTypeOptions(directionOverride, resource),
+    objectOpts: getObjectOptions(directionOverride, resource),
+    cssOpts: getCssOptions(directionOverride, resource),
   };
 }
 
-function resolveBatchSortMode(sortEveryCategory: boolean): SortModeFlags {
+function resolveBatchSortMode(
+  sortEveryCategory: boolean,
+  resource?: vscode.Uri
+): SortModeFlags {
   if (sortEveryCategory) {
     return {
       imports: true,
@@ -225,13 +323,13 @@ function resolveBatchSortMode(sortEveryCategory: boolean): SortModeFlags {
       css: true,
     };
   }
-  const config = getConfig();
+  const config = resolveConfigFor(resource);
   return {
-    imports: config.get<boolean>('sortImportsOnSave', true),
-    attributes: config.get<boolean>('sortAttributesOnSave', true),
-    types: config.get<boolean>('sortTypesOnSave', false),
-    objects: config.get<boolean>('sortObjectsOnSave', false),
-    css: config.get<boolean>('sortCssOnSave', false),
+    imports: config.sortImportsOnSave,
+    attributes: config.sortAttributesOnSave,
+    types: config.sortTypesOnSave,
+    objects: config.sortObjectsOnSave,
+    css: config.sortCssOnSave,
   };
 }
 
@@ -250,12 +348,12 @@ function findingToDiagnostic(
 }
 
 function refreshDiagnostics(doc: vscode.TextDocument) {
-  const config = getConfig();
-  if (!config.get<boolean>('showDiagnostics', true)) {
+  const config = resolveConfigFor(doc.uri);
+  if (!config.showDiagnostics) {
     diagnosticCollection?.delete(doc.uri);
     return;
   }
-  if (!canRunSort(doc.languageId)) {
+  if (!canRunSort(doc.languageId, doc.uri) || isResourceIgnored(doc.uri)) {
     diagnosticCollection?.delete(doc.uri);
     return;
   }
@@ -265,14 +363,8 @@ function refreshDiagnostics(doc: vscode.TextDocument) {
     showDiagnostics: true,
     runnable: true,
     isCssLanguage: PIPELINE_CSS_LANGS.has(doc.languageId),
-    jsRulesSupported: isLanguageSupported(doc.languageId),
-    toggles: {
-      imports: config.get<boolean>('diagnostics.imports', true),
-      attributes: config.get<boolean>('diagnostics.attributes', true),
-      types: config.get<boolean>('diagnostics.types', false),
-      objects: config.get<boolean>('diagnostics.objects', false),
-      css: config.get<boolean>('diagnostics.css', false),
-    },
+    jsRulesSupported: isLanguageSupported(doc.languageId, doc.uri),
+    toggles: config.diagnostics,
     opts: buildPipelineSorterOptions(undefined, doc.uri),
   });
 
@@ -285,8 +377,11 @@ function scheduleDiagnostics(doc: vscode.TextDocument) {
   diagnosticDebounce = setTimeout(() => refreshDiagnostics(doc), 400);
 }
 
-function resolveSortMode(forSave: boolean, mode?: SortMode): SortMode {
-  const config = getConfig();
+function resolveSortMode(
+  forSave: boolean,
+  mode?: SortMode,
+  resource?: vscode.Uri
+): SortMode {
   if (mode) return mode;
   if (!forSave) {
     return {
@@ -297,12 +392,13 @@ function resolveSortMode(forSave: boolean, mode?: SortMode): SortMode {
       css: true,
     };
   }
+  const config = resolveConfigFor(resource);
   return {
-    imports: config.get<boolean>('sortImportsOnSave', true),
-    attributes: config.get<boolean>('sortAttributesOnSave', true),
-    types: config.get<boolean>('sortTypesOnSave', false),
-    objects: config.get<boolean>('sortObjectsOnSave', false),
-    css: config.get<boolean>('sortCssOnSave', false),
+    imports: config.sortImportsOnSave,
+    attributes: config.sortAttributesOnSave,
+    types: config.sortTypesOnSave,
+    objects: config.sortObjectsOnSave,
+    css: config.sortCssOnSave,
   };
 }
 
@@ -315,7 +411,7 @@ function applyPipeline(
   mode?: SortMode,
   resource?: vscode.Uri
 ): string {
-  const m = resolveSortMode(forSave, mode);
+  const m = resolveSortMode(forSave, mode, resource);
   const flags: SortModeFlags = {
     imports: !!m.imports,
     attributes: !!m.attributes,
@@ -376,7 +472,7 @@ function applySelectionSort(
   const hasImports = /^import\s/m.test(selectedText);
   const hasJsx = /<[A-Za-z]/.test(selectedText);
   const hasTypeDecl = /^\s*(?:export\s+)?(?:type|interface|enum)\b/m.test(selectedText);
-  const nestedObj = getConfig().get<boolean>('objects.sortNestedObjects', false);
+  const nestedObj = resolveConfigFor(document.uri).objects.sortNestedObjects;
   const hasObj = nestedObj
     ? /(?:const|let|var)\s+\w+\s*=\s*\{|^\s*return\s*\{|\w+\(\s*\{/m.test(selectedText)
     : /(?:const|let|var)\s+\w+\s*=\s*\{|^\s*return\s*\{/m.test(selectedText);
@@ -390,16 +486,16 @@ function applySelectionSort(
     });
   }
   if (hasJsx) {
-    result = sortAllAttributes(result, { ...getAttributeOptions(direction), direction });
+    result = sortAllAttributes(result, { ...getAttributeOptions(direction, document.uri), direction });
   }
   if (hasTypeDecl) {
-    result = sortTypeProperties(result, { ...getTypeOptions(direction), direction });
+    result = sortTypeProperties(result, { ...getTypeOptions(direction, document.uri), direction });
   }
   if (hasObj) {
-    result = sortObjectProperties(result, { ...getObjectOptions(direction), direction });
+    result = sortObjectProperties(result, { ...getObjectOptions(direction, document.uri), direction });
   }
   if (PIPELINE_CSS_LANGS.has(document.languageId)) {
-    result = sortCssProperties(result, { ...getCssOptions(direction), direction });
+    result = sortCssProperties(result, { ...getCssOptions(direction, document.uri), direction });
   }
 
   if (result !== selectedText) {
@@ -428,7 +524,7 @@ function applyForceSort(editor: vscode.TextEditor, direction: ResolvedDirection)
     lines.push(document.lineAt(i).text);
   }
 
-  const opts = getForceSortOptions(direction);
+  const opts = getForceSortOptions(direction, document.uri);
   const sorted = sortLinesWithGrouping(lines, opts.direction, opts.groupByEmptyRows);
   const newText = sorted.join('\n');
   const oldText = lines.join('\n');
@@ -539,7 +635,7 @@ export function activate(context: vscode.ExtensionContext) {
   if (workspaceRoot) {
     const refreshImportDiagnostics = () => {
       for (const doc of vscode.workspace.textDocuments) {
-        if (doc.uri.scheme === 'file' && canRunSort(doc.languageId)) {
+        if (doc.uri.scheme === 'file' && canRunSort(doc.languageId, doc.uri)) {
           scheduleDiagnostics(doc);
         }
       }
@@ -555,6 +651,8 @@ export function activate(context: vscode.ExtensionContext) {
     };
     watchJson('**/tsconfig.json');
     watchJson('**/jsconfig.json');
+    watchJson('**/.pyramidsortrc.json');
+    watchJson('**/.pyramidsortignore');
   }
 
   context.subscriptions.push(
@@ -592,7 +690,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('pyramidSort.sort', async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || !canRunSort(editor.document.languageId)) return;
+      if (!editor || !canRunSort(editor.document.languageId, editor.document.uri)) return;
       const edits = applyFullSort(editor.document, undefined, false);
       await applyEdits(editor, edits);
       scheduleDiagnostics(editor.document);
@@ -602,7 +700,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('pyramidSort.sortAscending', async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || !canRunSort(editor.document.languageId)) return;
+      if (!editor || !canRunSort(editor.document.languageId, editor.document.uri)) return;
       const edits = applySelectionSort(editor, 'ascending');
       await applyEdits(editor, edits);
       scheduleDiagnostics(editor.document);
@@ -612,7 +710,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('pyramidSort.sortDescending', async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || !canRunSort(editor.document.languageId)) return;
+      if (!editor || !canRunSort(editor.document.languageId, editor.document.uri)) return;
       const edits = applySelectionSort(editor, 'descending');
       await applyEdits(editor, edits);
       scheduleDiagnostics(editor.document);
@@ -622,7 +720,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('pyramidSort.sortImports', async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || !isLanguageSupported(editor.document.languageId)) return;
+      if (!editor || !isLanguageSupported(editor.document.languageId, editor.document.uri)) return;
       const opts = getImportOptions(undefined, editor.document.uri);
       const edits = applyCategorySort(editor, (src) => sortImports(src, opts));
       await applyEdits(editor, edits);
@@ -633,8 +731,8 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('pyramidSort.sortAttributes', async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || !isLanguageSupported(editor.document.languageId)) return;
-      const opts = getAttributeOptions();
+      if (!editor || !isLanguageSupported(editor.document.languageId, editor.document.uri)) return;
+      const opts = getAttributeOptions(undefined, editor.document.uri);
       const edits = applyCategorySort(editor, (src) => sortAllAttributes(src, opts));
       await applyEdits(editor, edits);
       scheduleDiagnostics(editor.document);
@@ -644,8 +742,8 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('pyramidSort.sortTypes', async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || !isLanguageSupported(editor.document.languageId)) return;
-      const opts = getTypeOptions();
+      if (!editor || !isLanguageSupported(editor.document.languageId, editor.document.uri)) return;
+      const opts = getTypeOptions(undefined, editor.document.uri);
       const edits = applyCategorySort(editor, (src) => sortTypeProperties(src, opts));
       await applyEdits(editor, edits);
       scheduleDiagnostics(editor.document);
@@ -655,8 +753,8 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('pyramidSort.sortObjects', async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || !isLanguageSupported(editor.document.languageId)) return;
-      const opts = getObjectOptions();
+      if (!editor || !isLanguageSupported(editor.document.languageId, editor.document.uri)) return;
+      const opts = getObjectOptions(undefined, editor.document.uri);
       const edits = applyCategorySort(editor, (src) => sortObjectProperties(src, opts));
       await applyEdits(editor, edits);
       scheduleDiagnostics(editor.document);
@@ -667,7 +765,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('pyramidSort.sortCss', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || !PIPELINE_CSS_LANGS.has(editor.document.languageId)) return;
-      const opts = getCssOptions();
+      const opts = getCssOptions(undefined, editor.document.uri);
       const edits = applyCategorySort(editor, (src) => sortCssProperties(src, opts));
       await applyEdits(editor, edits);
       scheduleDiagnostics(editor.document);
@@ -700,26 +798,8 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const root = folder.uri.fsPath;
-      const config = getConfig();
-      const exts = config.get<string[]>('extensions', [
-        '.js',
-        '.jsx',
-        '.ts',
-        '.tsx',
-        '.css',
-        '.scss',
-      ]);
-      const files = listWorkspaceFiles(root, exts);
-      const toggles = {
-        showDiagnostics: config.get<boolean>('showDiagnostics', true),
-        diagnostics: {
-          imports: config.get<boolean>('diagnostics.imports', true),
-          attributes: config.get<boolean>('diagnostics.attributes', true),
-          types: config.get<boolean>('diagnostics.types', false),
-          objects: config.get<boolean>('diagnostics.objects', false),
-          css: config.get<boolean>('diagnostics.css', false),
-        },
-      };
+      const folderConfig = resolveConfigFor(folder.uri);
+      const files = listWorkspaceFiles(root, folderConfig.extensions);
 
       const scanRows: ScanReportFileRow[] = [];
 
@@ -736,22 +816,23 @@ export function activate(context: vscode.ExtensionContext) {
             const fp = files[i];
             progress.report({ message: `${i + 1}/${total} ${path.basename(fp)}` });
             const lang = languageIdForFsPath(fp);
-            if (!lang || !canRunSort(lang)) continue;
+            const uri = vscode.Uri.file(fp);
+            if (!lang || !canRunSort(lang, uri)) continue;
             let source: string;
             try {
               source = readSourceForWorkspaceFile(fp);
             } catch {
               continue;
             }
-            const uri = vscode.Uri.file(fp);
+            const fileConfig = resolveConfigFor(uri);
             const opts = buildPipelineSorterOptions(undefined, uri);
             const findings = collectFindingsLikeProblemsTab({
               source,
-              showDiagnostics: toggles.showDiagnostics,
-              runnable: canRunSort(lang),
+              showDiagnostics: fileConfig.showDiagnostics,
+              runnable: canRunSort(lang, uri),
               isCssLanguage: PIPELINE_CSS_LANGS.has(lang),
-              jsRulesSupported: isLanguageSupported(lang),
-              toggles: toggles.diagnostics,
+              jsRulesSupported: isLanguageSupported(lang, uri),
+              toggles: fileConfig.diagnostics,
               opts,
             });
             const scan = bucketFindingsForReport(findings);
@@ -798,7 +879,7 @@ export function activate(context: vscode.ExtensionContext) {
       );
       if (!picked) return;
 
-      const modeFlags = resolveBatchSortMode(picked.sortEvery);
+      const modeFlags = resolveBatchSortMode(picked.sortEvery, folder.uri);
       if (
         !modeFlags.imports &&
         !modeFlags.attributes &&
@@ -813,16 +894,8 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const root = folder.uri.fsPath;
-      const config = getConfig();
-      const exts = config.get<string[]>('extensions', [
-        '.js',
-        '.jsx',
-        '.ts',
-        '.tsx',
-        '.css',
-        '.scss',
-      ]);
-      const files = listWorkspaceFiles(root, exts);
+      const folderConfig = resolveConfigFor(folder.uri);
+      const files = listWorkspaceFiles(root, folderConfig.extensions);
       const sortRows: SortReportFileRow[] = [];
 
       await vscode.window.withProgress(
@@ -839,16 +912,17 @@ export function activate(context: vscode.ExtensionContext) {
             const fp = files[i];
             progress.report({ message: `${i + 1}/${total} ${path.basename(fp)}` });
             const lang = languageIdForFsPath(fp);
-            if (!lang || !canRunSort(lang)) continue;
+            const uri = vscode.Uri.file(fp);
+            if (!lang || !canRunSort(lang, uri)) continue;
             let source: string;
             try {
               source = readSourceForWorkspaceFile(fp);
             } catch {
               continue;
             }
-            const uri = vscode.Uri.file(fp);
             const opts = buildPipelineSorterOptions(undefined, uri);
-            const { result, changed } = sortFileSource(source, lang, modeFlags, opts);
+            const fileMode = resolveBatchSortMode(picked.sortEvery, uri);
+            const { result, changed } = sortFileSource(source, lang, fileMode, opts);
             sortRows.push({
               relativePath: path.relative(root, fp),
               absolutePath: fp,
@@ -962,21 +1036,16 @@ npx pyramid-sort . --scan
         return;
       }
       const { document } = event;
-      if (!canRunSort(document.languageId)) return;
+      if (!canRunSort(document.languageId, document.uri)) return;
+      if (isResourceIgnored(document.uri)) return;
 
-      const config = getConfig();
-      const sortImportsOnSave = config.get<boolean>('sortImportsOnSave', true);
-      const sortAttrsOnSave = config.get<boolean>('sortAttributesOnSave', true);
-      const sortTypesOnSave = config.get<boolean>('sortTypesOnSave', false);
-      const sortObjectsOnSave = config.get<boolean>('sortObjectsOnSave', false);
-      const sortCssOnSave = config.get<boolean>('sortCssOnSave', false);
-
+      const config = resolveConfigFor(document.uri);
       if (
-        !sortImportsOnSave &&
-        !sortAttrsOnSave &&
-        !sortTypesOnSave &&
-        !sortObjectsOnSave &&
-        !sortCssOnSave
+        !config.sortImportsOnSave &&
+        !config.sortAttributesOnSave &&
+        !config.sortTypesOnSave &&
+        !config.sortObjectsOnSave &&
+        !config.sortCssOnSave
       ) {
         return;
       }

@@ -222,6 +222,10 @@ const item = {
 
 In the VS Code Settings editor, options are grouped into sections: **Pyramid Sort** (extensions, diagnostics), **Pyramid Sort: Imports**, **Attributes**, **Types**, **Objects**, **CSS**, and **Force Sort**.
 
+A per-folder **`.pyramidsortrc.json`** overrides those settings for the editor (on-save, commands, diagnostics, scan/sort-all) and the CLI. Pyramid Sort walks from the file toward the filesystem root and uses the **nearest** rc file. Present keys in that file win over VS Code settings; omitted keys keep the VS Code value, then the built-in default. Nested packages can each have their own file.
+
+A **`.pyramidsortignore`** file (gitignore syntax) skips files for on-save, diagnostics, scan, sort-all, and the CLI. Nearest file wins; patterns are relative to that file's directory. Explicit editor sort commands still run.
+
 | Setting                                           | Type     | Default     | Description                                                                                                                                 |
 | ------------------------------------------------- | -------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pyramidSort.sortImportsOnSave`                   | boolean  | `true`      | Sort imports on save                                                                                                                        |
@@ -309,7 +313,7 @@ npx pyramid-sort <file> --css-only
 
 ### Workspace-wide scan and sort
 
-From a project root (or any folder), matching files are collected using **`.pyramidsortrc.json` `extensions`**, the workspace **`.gitignore`**, and the same default skips as the extension (`node_modules`, `.git`, `dist`, `build`, `out`, `coverage`, `.next`, `.turbo`).
+From a project root (or any folder), matching files are collected using **`.pyramidsortrc.json` `extensions`**, the nearest **`.pyramidsortignore`**, the workspace **`.gitignore`**, and the same default skips as the extension (`node_modules`, `.git`, `dist`, `build`, `out`, `coverage`, `.next`, `.turbo`).
 
 ```bash
 npx pyramid-sort . --scan
@@ -325,7 +329,9 @@ npx pyramid-sort . --sort-all --check
 
 ### `.pyramidsortrc.json`
 
-Example:
+The editor and the CLI share this file. It can hold every Pyramid Sort setting: which extensions to touch, sort direction, on-save categories, diagnostics, and per-sorter options. Nearest file wins over VS Code `pyramidSort.*` settings; missing keys fall back to VS Code, then defaults. Invalid JSON is skipped so a parent rc can still apply. Editors autocomplete from the bundled schema.
+
+Example (all keys, built-in defaults):
 
 ```json
 {
@@ -333,7 +339,9 @@ Example:
     "direction": "ascending",
     "consolidateMultilineImports": true,
     "maxLineWidth": 0,
-    "groupByEmptyRows": true
+    "localAliasPatterns": ["@/", "~/"],
+    "groupByEmptyRows": true,
+    "groupExternalLocal": true
   },
   "attributes": {
     "direction": "ascending",
@@ -350,6 +358,10 @@ Example:
     "sortNestedObjects": false
   },
   "css": {
+    "direction": "ascending",
+    "groupByEmptyRows": true
+  },
+  "forceSort": {
     "direction": "ascending",
     "groupByEmptyRows": true
   },
@@ -370,7 +382,18 @@ Example:
 }
 ```
 
-Optional **`showDiagnostics`**, **`diagnostics`**, and **`sort*OnSave`** mirror VS Code settings and control **CLI** `--scan` / `--sort-all` batch behavior. `.css` / `.scss` / `.less` files are still processed when the run includes CSS sorting, independent of `extensions`.
+**`extensions`** is which files to sort and scan. **`sort*OnSave`** is which categories run on save and CLI `--sort-all`. **`direction`** is per category. `.css` / `.scss` / `.less` files are still processed when the run includes CSS sorting.
+
+### `.pyramidsortignore`
+
+Same syntax as `.gitignore`. Walks from the file toward the filesystem root; the nearest file wins. Used by scan, sort-all, CLI single-file, on-save, and diagnostics. Manual editor commands are not blocked.
+
+```
+# generated / fixtures
+**/*.generated.ts
+fixtures/
+src/legacy/**
+```
 
 ---
 

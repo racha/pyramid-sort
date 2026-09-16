@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/racha/pyramid-sort/schemas/pyramidsortrc.json",
+  "title": "Pyramid Sort project config",
+  "description": "All Pyramid Sort settings for the editor and CLI. Place as .pyramidsortrc.json in a project or package folder.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "imports": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "direction": { "enum": ["ascending", "descending", "auto"] },
+        "consolidateMultilineImports": { "type": "boolean" },
+        "maxLineWidth": { "type": "number" },
+        "localAliasPatterns": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "groupByEmptyRows": { "type": "boolean" },
+        "groupExternalLocal": { "type": "boolean" }
+      }
+    },
+    "attributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "direction": { "enum": ["ascending", "descending", "auto"] },
+        "groupByEmptyRows": { "type": "boolean" },
+        "skipGroupsWithSpread": { "type": "boolean" }
+      }
+    },
+    "types": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "direction": { "enum": ["ascending", "descending", "auto"] },
+        "groupByEmptyRows": { "type": "boolean" }
+      }
+    },
+    "objects": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "direction": { "enum": ["ascending", "descending", "auto"] },
+        "groupByEmptyRows": { "type": "boolean" },
+        "sortNestedObjects": { "type": "boolean" }
+      }
+    },
+    "css": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "direction": { "enum": ["ascending", "descending", "auto"] },
+        "groupByEmptyRows": { "type": "boolean" }
+      }
+    },
+    "forceSort": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "direction": { "enum": ["ascending", "descending"] },
+        "groupByEmptyRows": { "type": "boolean" }
+      }
+    },
+    "extensions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "File extensions to sort and scan."
+    },
+    "showDiagnostics": { "type": "boolean" },
+    "diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "imports": { "type": "boolean" },
+        "attributes": { "type": "boolean" },
+        "types": { "type": "boolean" },
+        "objects": { "type": "boolean" },
+        "css": { "type": "boolean" }
+      }
+    },
+    "sortImportsOnSave": { "type": "boolean" },
+    "sortAttributesOnSave": { "type": "boolean" },
+    "sortTypesOnSave": { "type": "boolean" },
+    "sortObjectsOnSave": { "type": "boolean" },
+    "sortCssOnSave": { "type": "boolean" }
+  }
+}

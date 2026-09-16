@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { collectAliasPatternsFromFileToFsRoot } from './core/aliasDetector';
-import { listWorkspaceFiles } from './core/fileWalker';
+import { isPyramidSortIgnored, listWorkspaceFiles } from './core/fileWalker';
 import {
   buildScanReportMarkdown,
   buildSortReportMarkdown,
@@ -11,8 +11,8 @@ import {
 } from './core/reportBuilder';
 import { PIPELINE_CSS_LANGS, sortFileSource, SortModeFlags } from './core/sortPipeline';
 import { resolvePrintWidth } from './core/printWidth';
+import { mergeAliasPatterns, resolvePyramidSortConfig } from './core/configLoader';
 import {
-  DEFAULT_CONFIG,
   PipelineSorterOptions,
   PyramidSortConfig,
   SortDirection,
@@ -33,44 +33,6 @@ const SUPPORTED_EXTENSIONS: Record<string, string> = {
   '.scss': 'scss',
   '.less': 'less',
 };
-
-function loadConfig(startDir: string): PyramidSortConfig {
-  let dir = startDir;
-  while (true) {
-    const configPath = path.join(dir, '.pyramidsortrc.json');
-    if (fs.existsSync(configPath)) {
-      try {
-        const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-        return {
-          imports: { ...DEFAULT_CONFIG.imports, ...raw.imports },
-          attributes: { ...DEFAULT_CONFIG.attributes, ...raw.attributes },
-          types: { ...DEFAULT_CONFIG.types, ...raw.types },
-          objects: { ...DEFAULT_CONFIG.objects, ...raw.objects },
-          css: { ...DEFAULT_CONFIG.css, ...raw.css },
-          forceSort: { ...DEFAULT_CONFIG.forceSort, ...raw.forceSort },
-          extensions: raw.extensions ?? DEFAULT_CONFIG.extensions,
-          showDiagnostics: raw.showDiagnostics ?? DEFAULT_CONFIG.showDiagnostics,
-          diagnostics: {
-            ...DEFAULT_CONFIG.diagnostics,
-            ...raw.diagnostics,
-          },
-          sortImportsOnSave: raw.sortImportsOnSave ?? DEFAULT_CONFIG.sortImportsOnSave,
-          sortAttributesOnSave:
-            raw.sortAttributesOnSave ?? DEFAULT_CONFIG.sortAttributesOnSave,
-          sortTypesOnSave: raw.sortTypesOnSave ?? DEFAULT_CONFIG.sortTypesOnSave,
-          sortObjectsOnSave: raw.sortObjectsOnSave ?? DEFAULT_CONFIG.sortObjectsOnSave,
-          sortCssOnSave: raw.sortCssOnSave ?? DEFAULT_CONFIG.sortCssOnSave,
-        };
-      } catch {
-        break;
-      }
-    }
-    const parent = path.dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return DEFAULT_CONFIG;
-}
 
 function isDirectory(p: string): boolean {
   try {
@@ -119,7 +81,10 @@ function cfgToPipelineOpts(
   directionOverride: SortDirection | undefined
 ): PipelineSorterOptions {
   const fileDir = path.dirname(filePath);
-  const aliasPatterns = collectAliasPatternsFromFileToFsRoot(filePath);
+  const aliasPatterns = mergeAliasPatterns(
+    collectAliasPatternsFromFileToFsRoot(filePath),
+    config.imports.localAliasPatterns
+  );
   const maxLineWidth = resolvePrintWidth({
     override: config.imports.maxLineWidth,
     searchFromDir: fileDir,
@@ -196,6 +161,7 @@ function collectBatchFiles(resolved: string, listExtensions: string[]): string[]
   if (isDirectory(resolved)) {
     return listWorkspaceFiles(resolved, listExtensions);
   }
+  if (isPyramidSortIgnored(resolved)) return [];
   return [resolved];
 }
 
@@ -229,6 +195,10 @@ function runSingleFileSort(
   const allowed = config.extensions.map(normExt);
   const stylesheet = ['.css', '.scss', '.less'].includes(ext);
   if (!allowed.includes(ext) && !stylesheet) {
+    process.exit(0);
+  }
+
+  if (isPyramidSortIgnored(resolvedPath)) {
     process.exit(0);
   }
 
@@ -306,7 +276,7 @@ function main() {
   }
 
   if (!batch) {
-    const config = loadConfig(path.dirname(resolvedPath));
+    const config = resolvePyramidSortConfig(path.dirname(resolvedPath));
     runSingleFileSort(
       resolvedPath,
       config,
@@ -321,7 +291,7 @@ function main() {
     return;
   }
 
-  const listConfig = loadConfig(isDirectory(resolvedPath) ? resolvedPath : path.dirname(resolvedPath));
+  const listConfig = resolvePyramidSortConfig(isDirectory(resolvedPath) ? resolvedPath : path.dirname(resolvedPath));
   const files = collectBatchFiles(resolvedPath, listConfig.extensions);
   const relRoot = reportRootForRelative(resolvedPath);
 
@@ -329,7 +299,7 @@ function main() {
     const scanRows: ScanReportFileRow[] = [];
 
     for (const fp of files) {
-      const cfg = loadConfig(path.dirname(fp));
+      const cfg = resolvePyramidSortConfig(path.dirname(fp));
       const ext = path.extname(fp).toLowerCase();
       const languageId = SUPPORTED_EXTENSIONS[ext];
       if (!languageId) continue;
@@ -403,7 +373,7 @@ function main() {
     let wouldChange = 0;
 
     for (const fp of files) {
-      const cfg = loadConfig(path.dirname(fp));
+      const cfg = resolvePyramidSortConfig(path.dirname(fp));
       const ext = path.extname(fp).toLowerCase();
       const languageId = SUPPORTED_EXTENSIONS[ext];
       if (!languageId) continue;

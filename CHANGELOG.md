@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.8] - 2026-09-16
+
+### Added
+
+- New `.pyramidsortrc.json`
+- New `.pyramidsortignore`
+
 ## [0.4.7] - 2026-09-16
 
 ### Fixed
