@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   RC_FILENAME,
-  RC_FILENAME_LEGACY,
   findNearestRcPath,
   loadNearestRcRaw,
   mergeAliasPatterns,
@@ -73,11 +72,11 @@ describe('findNearestRcPath / loadNearestRcRaw', () => {
     expect(loadNearestRcRaw(dir)).toBeNull();
   });
 
-  it('prefers pyramidsortrc.json over a dotted file in the same folder', () => {
+  it('prefers .pyramidsort over a legacy name in the same folder', () => {
     const root = makeDir('ps-rc-both-');
     writeRc(root, { sortCssOnSave: true });
     fs.writeFileSync(
-      path.join(root, RC_FILENAME_LEGACY),
+      path.join(root, 'pyramidsortrc.json'),
       JSON.stringify({ sortTypesOnSave: true }),
       'utf-8'
     );
@@ -85,14 +84,11 @@ describe('findNearestRcPath / loadNearestRcRaw', () => {
     expect(loadNearestRcRaw(root)).toEqual({ sortCssOnSave: true });
   });
 
-  it('reads a legacy dotted rc when the non-dotted file is absent', () => {
+  it('reads a legacy rc when .pyramidsort is absent', () => {
     const root = makeDir('ps-rc-legacy-');
-    fs.writeFileSync(
-      path.join(root, RC_FILENAME_LEGACY),
-      JSON.stringify({ showDiagnostics: false }),
-      'utf-8'
-    );
-    expect(findNearestRcPath(root)).toBe(path.join(root, RC_FILENAME_LEGACY));
+    const legacy = path.join(root, '.pyramidsortrc.json');
+    fs.writeFileSync(legacy, JSON.stringify({ showDiagnostics: false }), 'utf-8');
+    expect(findNearestRcPath(root)).toBe(legacy);
     expect(loadNearestRcRaw(root)).toEqual({ showDiagnostics: false });
   });
 });

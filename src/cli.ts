@@ -364,7 +364,7 @@ function main() {
       !probeMode.css
     ) {
       console.error(
-        'Error: No sort categories enabled. Use --all-categories or set sortImportsOnSave / sortAttributesOnSave / … in pyramidsortrc.json.'
+        'Error: No sort categories enabled. Use --all-categories or set sortImportsOnSave / sortAttributesOnSave / … in .pyramidsort.'
       );
       process.exit(1);
     }

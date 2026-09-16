@@ -129,12 +129,15 @@
         "title": "Pyramid Sort: Sort All Files"
       }
     ],
+    "languages": [
+      {
+        "id": "json",
+        "filenames": [".pyramidsort", ".pyramidsortrc"]
+      }
+    ],
     "jsonValidation": [
       {
-        "fileMatch": [
-          "pyramidsortrc.json",
-          ".pyramidsortrc.json"
-        ],
+        "fileMatch": [".pyramidsort", ".pyramidsortrc", "pyramidsortrc.json", ".pyramidsortrc.json"],
         "url": "./schemas/pyramidsortrc.json"
       }
     ],

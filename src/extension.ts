@@ -653,6 +653,8 @@ export function activate(context: vscode.ExtensionContext) {
     };
     watchJson('**/tsconfig.json');
     watchJson('**/jsconfig.json');
+    watchJson('**/.pyramidsort');
+    watchJson('**/.pyramidsortrc');
     watchJson('**/pyramidsortrc.json');
     watchJson('**/.pyramidsortrc.json');
     watchJson('**/.pyramidsortignore');

@@ -3,10 +3,13 @@ import * as path from 'path';
 
 import { DEFAULT_CONFIG, PyramidSortConfig } from './types';
 
-export const RC_FILENAME = 'pyramidsortrc.json';
-export const RC_FILENAME_LEGACY = '.pyramidsortrc.json';
-
-const RC_NAMES = [RC_FILENAME, RC_FILENAME_LEGACY] as const;
+export const RC_FILENAME = '.pyramidsort';
+export const RC_NAMES = [
+  '.pyramidsort',
+  '.pyramidsortrc',
+  'pyramidsortrc.json',
+  '.pyramidsortrc.json',
+] as const;
 
 const NESTED_KEYS = [
   'imports',
@@ -129,7 +132,7 @@ export function resolvePyramidSortConfig(
   return mergePyramidSortConfig(DEFAULT_CONFIG, vscodeLayer, loadNearestRcRaw(startDir));
 }
 
-/** Stable full-settings JSON for `pyramidsortrc.json`. */
+/** Stable full-settings JSON for `.pyramidsort`. */
 export function pyramidSortConfigToRcJson(config: PyramidSortConfig): string {
   return `${JSON.stringify(
     {

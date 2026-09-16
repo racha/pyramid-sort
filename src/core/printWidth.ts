@@ -6,7 +6,7 @@ export const DEFAULT_PRINT_WIDTH = 80;
 
 export interface ResolvePrintWidthInput {
   /**
-   * Explicit override (e.g. `pyramidSort.imports.maxLineWidth` or `pyramidsortrc.json`).
+   * Explicit override (e.g. `pyramidSort.imports.maxLineWidth` or `.pyramidsort`).
    * Values **greater than 0** use this width. **0** means “use auto-detection”.
    */
   override?: number;
