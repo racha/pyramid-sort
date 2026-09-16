@@ -2,7 +2,7 @@
   "name": "pyramid-sort",
   "displayName": "Pyramid Sort",
   "description": "Sort your imports, attributes, types, objects & CSS by line length — short lines on top, long lines on the bottom. Clean pyramid-shaped code.",
-  "version": "0.4.9",
+  "version": "0.4.10",
   "publisher": "INVEON-Development",
   "license": "MIT",
   "publishConfig": {
@@ -132,12 +132,20 @@
     "languages": [
       {
         "id": "json",
-        "filenames": [".pyramidsort", ".pyramidsortrc"]
+        "filenames": [
+          ".pyramidsort",
+          ".pyramidsortrc"
+        ]
       }
     ],
     "jsonValidation": [
       {
-        "fileMatch": [".pyramidsort", ".pyramidsortrc", "pyramidsortrc.json", ".pyramidsortrc.json"],
+        "fileMatch": [
+          ".pyramidsort",
+          ".pyramidsortrc",
+          "pyramidsortrc.json",
+          ".pyramidsortrc.json"
+        ],
         "url": "./schemas/pyramidsortrc.json"
       }
     ],

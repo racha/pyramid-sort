@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.10] - 2026-09-16
+
+### Changed
+
+- Changed `.pyramidsort`
+
 ## [0.4.9] - 2026-09-16
 
 ### Added
