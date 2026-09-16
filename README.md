@@ -213,6 +213,7 @@ const item = {
 | Pyramid Sort: Force Sort Descending | Same, descending                             |
 | Pyramid Sort: Save Without Sorting  | Save the file once without on-save sorting   |
 | Pyramid Sort: Setup AI Hook         | Create hook JSON for the CLI                 |
+| Pyramid Sort: Generate Config File  | Write `pyramidsortrc.json` from editor settings |
 | Pyramid Sort: Scan All Files (Report) | Workspace scan; opens Markdown issue report |
 | Pyramid Sort: Sort All Files       | Workspace sort + Markdown summary of changes |
 
@@ -222,7 +223,7 @@ const item = {
 
 In the VS Code Settings editor, options are grouped into sections: **Pyramid Sort** (extensions, diagnostics), **Pyramid Sort: Imports**, **Attributes**, **Types**, **Objects**, **CSS**, and **Force Sort**.
 
-A per-folder **`.pyramidsortrc.json`** overrides those settings for the editor (on-save, commands, diagnostics, scan/sort-all) and the CLI. Pyramid Sort walks from the file toward the filesystem root and uses the **nearest** rc file. Present keys in that file win over VS Code settings; omitted keys keep the VS Code value, then the built-in default. Nested packages can each have their own file.
+A per-folder **`pyramidsortrc.json`** overrides those settings for the editor (on-save, commands, diagnostics, scan/sort-all) and the CLI. Pyramid Sort walks from the file toward the filesystem root and uses the **nearest** rc file. Present keys in that file win over VS Code settings; omitted keys keep the VS Code value, then the built-in default. Nested packages can each have their own file. A dotted **`.pyramidsortrc.json`** is still read if no non-dotted file is in that folder.
 
 A **`.pyramidsortignore`** file (gitignore syntax) skips files for on-save, diagnostics, scan, sort-all, and the CLI. Nearest file wins; patterns are relative to that file's directory. Explicit editor sort commands still run.
 
@@ -313,7 +314,7 @@ npx pyramid-sort <file> --css-only
 
 ### Workspace-wide scan and sort
 
-From a project root (or any folder), matching files are collected using **`.pyramidsortrc.json` `extensions`**, the nearest **`.pyramidsortignore`**, the workspace **`.gitignore`**, and the same default skips as the extension (`node_modules`, `.git`, `dist`, `build`, `out`, `coverage`, `.next`, `.turbo`).
+From a project root (or any folder), matching files are collected using **`pyramidsortrc.json` `extensions`**, the nearest **`.pyramidsortignore`**, the workspace **`.gitignore`**, and the same default skips as the extension (`node_modules`, `.git`, `dist`, `build`, `out`, `coverage`, `.next`, `.turbo`).
 
 ```bash
 npx pyramid-sort . --scan
@@ -324,12 +325,12 @@ npx pyramid-sort . --sort-all --check
 ```
 
 - **`--scan`** — Markdown report on stdout; exit code **1** if any issue is found (handy in CI).
-- **`--sort-all`** — rewrites files in place; respects **`sort*OnSave`** in `.pyramidsortrc.json` unless **`--all-categories`** is set. **`--check`** does not write; exits **1** if any file would change.
-- Per-file settings still come from the nearest `.pyramidsortrc.json` when you use monorepo layouts.
+- **`--sort-all`** — rewrites files in place; respects **`sort*OnSave`** in `pyramidsortrc.json` unless **`--all-categories`** is set. **`--check`** does not write; exits **1** if any file would change.
+- Per-file settings still come from the nearest `pyramidsortrc.json` when you use monorepo layouts.
 
-### `.pyramidsortrc.json`
+### `pyramidsortrc.json`
 
-The editor and the CLI share this file. It can hold every Pyramid Sort setting: which extensions to touch, sort direction, on-save categories, diagnostics, and per-sorter options. Nearest file wins over VS Code `pyramidSort.*` settings; missing keys fall back to VS Code, then defaults. Invalid JSON is skipped so a parent rc can still apply. Editors autocomplete from the bundled schema.
+The editor and the CLI share this file. It can hold every Pyramid Sort setting: which extensions to touch, sort direction, on-save categories, diagnostics, and per-sorter options. Nearest file wins over VS Code `pyramidSort.*` settings; missing keys fall back to VS Code, then defaults. Invalid JSON is skipped so a parent rc can still apply. Editors autocomplete from the bundled schema. **Pyramid Sort: Generate Config File** writes the current VS Code `pyramidSort.*` settings into the workspace `pyramidsortrc.json`. A `.pyramidsortrc.json` in the same folder is used only when the non-dotted file is missing.
 
 Example (all keys, built-in defaults):
 

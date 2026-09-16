@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.9] - 2026-09-16
+
+### Added
+
+- New Generate Config File
+
+### Changed
+
+- Changed `pyramidsortrc.json`
+
 ## [0.4.8] - 2026-09-16
 
 ### Added

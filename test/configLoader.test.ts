@@ -6,10 +6,12 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   RC_FILENAME,
+  RC_FILENAME_LEGACY,
   findNearestRcPath,
   loadNearestRcRaw,
   mergeAliasPatterns,
   mergePyramidSortConfig,
+  pyramidSortConfigToRcJson,
   resolvePyramidSortConfig,
 } from '../src/core/configLoader';
 import { DEFAULT_CONFIG } from '../src/core/types';
@@ -69,6 +71,29 @@ describe('findNearestRcPath / loadNearestRcRaw', () => {
     const dir = makeDir('ps-rc-none-');
     expect(findNearestRcPath(dir)).toBeNull();
     expect(loadNearestRcRaw(dir)).toBeNull();
+  });
+
+  it('prefers pyramidsortrc.json over a dotted file in the same folder', () => {
+    const root = makeDir('ps-rc-both-');
+    writeRc(root, { sortCssOnSave: true });
+    fs.writeFileSync(
+      path.join(root, RC_FILENAME_LEGACY),
+      JSON.stringify({ sortTypesOnSave: true }),
+      'utf-8'
+    );
+    expect(findNearestRcPath(root)).toBe(path.join(root, RC_FILENAME));
+    expect(loadNearestRcRaw(root)).toEqual({ sortCssOnSave: true });
+  });
+
+  it('reads a legacy dotted rc when the non-dotted file is absent', () => {
+    const root = makeDir('ps-rc-legacy-');
+    fs.writeFileSync(
+      path.join(root, RC_FILENAME_LEGACY),
+      JSON.stringify({ showDiagnostics: false }),
+      'utf-8'
+    );
+    expect(findNearestRcPath(root)).toBe(path.join(root, RC_FILENAME_LEGACY));
+    expect(loadNearestRcRaw(root)).toEqual({ showDiagnostics: false });
   });
 });
 
@@ -197,6 +222,13 @@ describe('resolvePyramidSortConfig', () => {
       sortObjectsOnSave: true,
       sortCssOnSave: true,
     });
+  });
+});
+
+describe('pyramidSortConfigToRcJson', () => {
+  it('round-trips a full config through merge', () => {
+    const parsed = JSON.parse(pyramidSortConfigToRcJson(DEFAULT_CONFIG));
+    expect(mergePyramidSortConfig(parsed)).toEqual(DEFAULT_CONFIG);
   });
 });
 

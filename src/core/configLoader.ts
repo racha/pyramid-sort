@@ -3,7 +3,10 @@ import * as path from 'path';
 
 import { DEFAULT_CONFIG, PyramidSortConfig } from './types';
 
-export const RC_FILENAME = '.pyramidsortrc.json';
+export const RC_FILENAME = 'pyramidsortrc.json';
+export const RC_FILENAME_LEGACY = '.pyramidsortrc.json';
+
+const RC_NAMES = [RC_FILENAME, RC_FILENAME_LEGACY] as const;
 
 const NESTED_KEYS = [
   'imports',
@@ -28,14 +31,20 @@ function tryReadRcObject(configPath: string): Record<string, unknown> | null {
   }
 }
 
+function readableRcIn(dir: string): string | null {
+  for (const name of RC_NAMES) {
+    const configPath = path.join(dir, name);
+    if (fs.existsSync(configPath) && tryReadRcObject(configPath)) return configPath;
+  }
+  return null;
+}
+
 /** Walk startDir upward. First readable JSON object wins. Parse error: skip, keep walking. */
 export function findNearestRcPath(startDir: string): string | null {
   let dir = path.resolve(startDir);
   while (true) {
-    const configPath = path.join(dir, RC_FILENAME);
-    if (fs.existsSync(configPath) && tryReadRcObject(configPath)) {
-      return configPath;
-    }
+    const found = readableRcIn(dir);
+    if (found) return found;
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;
@@ -118,6 +127,30 @@ export function resolvePyramidSortConfig(
   vscodeLayer?: Partial<PyramidSortConfig>
 ): PyramidSortConfig {
   return mergePyramidSortConfig(DEFAULT_CONFIG, vscodeLayer, loadNearestRcRaw(startDir));
+}
+
+/** Stable full-settings JSON for `pyramidsortrc.json`. */
+export function pyramidSortConfigToRcJson(config: PyramidSortConfig): string {
+  return `${JSON.stringify(
+    {
+      imports: { ...config.imports },
+      attributes: { ...config.attributes },
+      types: { ...config.types },
+      objects: { ...config.objects },
+      css: { ...config.css },
+      forceSort: { ...config.forceSort },
+      extensions: [...config.extensions],
+      showDiagnostics: config.showDiagnostics,
+      diagnostics: { ...config.diagnostics },
+      sortImportsOnSave: config.sortImportsOnSave,
+      sortAttributesOnSave: config.sortAttributesOnSave,
+      sortTypesOnSave: config.sortTypesOnSave,
+      sortObjectsOnSave: config.sortObjectsOnSave,
+      sortCssOnSave: config.sortCssOnSave,
+    },
+    null,
+    2
+  )}\n`;
 }
 
 export function mergeAliasPatterns(...lists: Array<string[] | undefined>): string[] {

@@ -11,8 +11,10 @@ import { sortImports } from './core/importSorter';
 import { sortObjectProperties } from './core/objectSorter';
 import { resolvePrintWidth } from './core/printWidth';
 import {
+  RC_FILENAME,
   mergeAliasPatterns,
   mergePyramidSortConfig,
+  pyramidSortConfigToRcJson,
   resolvePyramidSortConfig,
 } from './core/configLoader';
 import {
@@ -651,6 +653,7 @@ export function activate(context: vscode.ExtensionContext) {
     };
     watchJson('**/tsconfig.json');
     watchJson('**/jsconfig.json');
+    watchJson('**/pyramidsortrc.json');
     watchJson('**/.pyramidsortrc.json');
     watchJson('**/.pyramidsortignore');
   }
@@ -1017,6 +1020,31 @@ npx pyramid-sort . --scan
       } else {
         vscode.window.showInformationMessage('AI configs already exist.');
       }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('pyramidSort.generateConfig', async () => {
+      const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (!wsRoot) {
+        vscode.window.showErrorMessage('No workspace folder open.');
+        return;
+      }
+
+      const dest = path.join(wsRoot, RC_FILENAME);
+      if (fs.existsSync(dest)) {
+        const pick = await vscode.window.showWarningMessage(
+          `${RC_FILENAME} already exists. Overwrite?`,
+          { modal: true },
+          'Overwrite'
+        );
+        if (pick !== 'Overwrite') return;
+      }
+
+      const json = pyramidSortConfigToRcJson(mergePyramidSortConfig(vscodeLayerFromConfig()));
+      fs.writeFileSync(dest, json, 'utf-8');
+      const doc = await vscode.workspace.openTextDocument(dest);
+      await vscode.window.showTextDocument(doc);
     })
   );
 
