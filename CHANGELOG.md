@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.7] - 2026-09-16
+
+### Fixed
+
+- Fixed JSX attribute sorter corrupting nested JSX attribute values
+- Fixed JSX attribute sorter rewriting inline callback and multi-attribute openers
+
 ## [0.4.6] - 2026-07-15
 
 ### Added

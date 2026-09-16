@@ -139,6 +139,254 @@ describe('sortAllAttributes', () => {
     expect(attrLines[attrLines.length - 1].trim()).toContain('onChange');
   });
 
+  it('preserves nested JSX inside a multi-line attribute', () => {
+    const source = [
+      '<ConfirmDialog',
+      '  description={',
+      '    <span>',
+      '      <span className="font-semibold">{name}</span> will be deleted permanently. It won&apos;t be available to use for',
+      '      future cases.',
+      '    </span>',
+      '  }',
+      '  title="Delete"',
+      '  onConfirm={handleDelete}',
+      '/>',
+    ].join('\n');
+
+    expect(sortAllAttributes(source, ascending)).toBe([
+      '<ConfirmDialog',
+      '  title="Delete"',
+      '  onConfirm={handleDelete}',
+      '  description={',
+      '    <span>',
+      '      <span className="font-semibold">{name}</span> will be deleted permanently. It won&apos;t be available to use for',
+      '      future cases.',
+      '    </span>',
+      '  }',
+      '/>',
+    ].join('\n'));
+  });
+
+  it('leaves mixed inline and multi-line attributes unchanged', () => {
+    const source = [
+      '<Button className="ml-auto w-45 pl-2" leftIcon={<Plus className="size-4" />} onClick={() => {',
+      '  // replace so back button skips this and goes straight to the table',
+      "  setSearchParams({ mode: 'new' }, { replace: true });",
+      '}}>',
+      '  New task',
+      '</Button>',
+    ].join('\n');
+
+    expect(sortAllAttributes(source, ascending)).toBe(source);
+  });
+
+  it('skips an inline callback opener without hiding later sortable tags', () => {
+    const source = [
+      '<DropdownSelect type="single" value={status} onValueChange={(val) => {',
+      '  if (updating || !val) return;',
+      '  onValueChange(val as CaseTaskStatus);',
+      '}}>',
+      '</DropdownSelect>',
+      '<Input',
+      '  placeholder="Search tasks"',
+      '  id="search"',
+      '/>',
+    ].join('\n');
+
+    expect(sortAllAttributes(source, ascending)).toBe([
+      '<DropdownSelect type="single" value={status} onValueChange={(val) => {',
+      '  if (updating || !val) return;',
+      '  onValueChange(val as CaseTaskStatus);',
+      '}}>',
+      '</DropdownSelect>',
+      '<Input',
+      '  id="search"',
+      '  placeholder="Search tasks"',
+      '/>',
+    ].join('\n'));
+  });
+
+  it.each([
+    ['comparison operator', ['  const shouldRun = count > limit;', '  run();']],
+    ['nested arrow', ['  const runLater = () => run();', '  runLater();']],
+    ['returned JSX', ['  return <span>value</span>;']],
+  ])('fails closed for inline callbacks containing a %s', (_name, body) => {
+    const unsafeBlock = [
+      '<Button className="wide" onClick={() => {',
+      ...body,
+      '}}>',
+      '  Save',
+      '  <TrailingChild />',
+      '</Button>',
+    ];
+    const source = [
+      '<Before',
+      '  placeholder="Before value"',
+      '  id="before"',
+      '/>',
+      ...unsafeBlock,
+      '<After',
+      '  placeholder="After value"',
+      '  id="after"',
+      '/>',
+    ].join('\n');
+    const expected = [
+      '<Before',
+      '  id="before"',
+      '  placeholder="Before value"',
+      '/>',
+      ...unsafeBlock,
+      '<After',
+      '  id="after"',
+      '  placeholder="After value"',
+      '/>',
+    ].join('\n');
+
+    const result = sortAllAttributes(source, ascending);
+    expect(result).toBe(expected);
+    expect(sortAllAttributes(result, ascending)).toBe(result);
+  });
+
+  it('fails closed when nested JSX starts on an inline attribute opener', () => {
+    const unsafeBlock = [
+      '<Button leftIcon={<Plus',
+      '  className="size-4"',
+      '  stroke={2}',
+      '/>} disabled',
+      '  id="button"',
+      '/>',
+    ];
+    const source = [
+      ...unsafeBlock,
+      '<Input',
+      '  placeholder="Search tasks"',
+      '  id="search"',
+      '/>',
+    ].join('\n');
+    const expected = [
+      ...unsafeBlock,
+      '<Input',
+      '  id="search"',
+      '  placeholder="Search tasks"',
+      '/>',
+    ].join('\n');
+
+    const result = sortAllAttributes(source, ascending);
+    expect(result).toBe(expected);
+    expect(sortAllAttributes(result, ascending)).toBe(result);
+  });
+
+  it('fails closed for an unsafe nested opener inside a valid attribute', () => {
+    const source = [
+      '<Modal',
+      '  content={',
+      '    <Panel title="A" onClick={() => {',
+      '      return count > limit;',
+      '    }} />',
+      '  }',
+      '  open',
+      '/>',
+    ].join('\n');
+    const expected = [
+      '<Modal',
+      '  open',
+      '  content={',
+      '    <Panel title="A" onClick={() => {',
+      '      return count > limit;',
+      '    }} />',
+      '  }',
+      '/>',
+    ].join('\n');
+
+    const result = sortAllAttributes(source, ascending);
+    expect(result).toBe(expected);
+    expect(sortAllAttributes(result, ascending)).toBe(result);
+  });
+
+  it('preserves trailing children after nested self-closing JSX', () => {
+    const source = [
+      '<Wrapper',
+      '  icon={',
+      '    <Icon',
+      '      className="very-long-icon-class"',
+      '      id="icon"',
+      '    />{" "}<strong>tail</strong>',
+      '  }',
+      '  title="x"',
+      '  onClose={close}',
+      '/>',
+    ].join('\n');
+    const expected = [
+      '<Wrapper',
+      '  title="x"',
+      '  onClose={close}',
+      '  icon={',
+      '    <Icon',
+      '      id="icon"',
+      '      className="very-long-icon-class"',
+      '    />{" "}<strong>tail</strong>',
+      '  }',
+      '/>',
+    ].join('\n');
+
+    const result = sortAllAttributes(source, ascending);
+    expect(result).toBe(expected);
+    expect(sortAllAttributes(result, ascending)).toBe(result);
+  });
+
+  it.each([
+    '<Button className="wide" disabled',
+    '<Button {...props} disabled',
+  ])('fails closed for multiple attributes sharing the opener: %s', (opener) => {
+    const unsafeBlock = [
+      opener,
+      '  id="button"',
+      '  type="button"',
+      '>',
+      '  Save',
+      '</Button>',
+    ];
+    const source = [
+      ...unsafeBlock,
+      '<Input',
+      '  placeholder="Search tasks"',
+      '  id="search"',
+      '/>',
+    ].join('\n');
+    const expected = [
+      ...unsafeBlock,
+      '<Input',
+      '  id="search"',
+      '  placeholder="Search tasks"',
+      '/>',
+    ].join('\n');
+
+    const result = sortAllAttributes(source, ascending);
+    expect(result).toBe(expected);
+    expect(sortAllAttributes(result, ascending)).toBe(result);
+  });
+
+  it('still supports one complete attribute on the opener', () => {
+    const source = [
+      '<Button onClick={() => save()}',
+      '  className="wide"',
+      '  id="button"',
+      '>',
+      '  Save',
+      '</Button>',
+    ].join('\n');
+
+    expect(sortAllAttributes(source, ascending)).toBe([
+      '<Button',
+      '  id="button"',
+      '  className="wide"',
+      '  onClick={() => save()}',
+      '>',
+      '  Save',
+      '</Button>',
+    ].join('\n'));
+  });
+
   it('handles the full input example from the plan', () => {
     const source = [
       '               <input',

@@ -100,15 +100,33 @@ export function findMultilineTagOpenings(lines: string[]): TagWithAttributes[] {
         tagName = withAttrsMatch[2];
         firstAttrText = withAttrsMatch[3];
 
-        const isClosedOnSameLine =
-          firstAttrText.endsWith('>') || firstAttrText.endsWith('/>');
+        let firstAttrState = createBracketState();
+        let hasTopLevelWhitespace = false;
+        const trimmedFirstAttr = firstAttrText.trim();
+        for (let ci = 0; ci < trimmedFirstAttr.length; ci++) {
+          if (isBalanced(firstAttrState) && /\s/.test(trimmedFirstAttr[ci])) {
+            hasTopLevelWhitespace = true;
+          }
+          firstAttrState = advanceChar(
+            firstAttrState,
+            trimmedFirstAttr[ci],
+            ci > 0 ? trimmedFirstAttr[ci - 1] : ''
+          );
+        }
+
+        const isClosedOnSameLine = splitAtTagClose(firstAttrText) !== null;
         const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
         const nextIsAttrOrClose =
           nextLine === '>' ||
           nextLine === '/>' ||
           (!nextLine.startsWith('<') && nextLine.length > 0);
 
-        if (!isClosedOnSameLine && nextIsAttrOrClose) {
+        if (
+          isBalanced(firstAttrState) &&
+          !hasTopLevelWhitespace &&
+          !isClosedOnSameLine &&
+          nextIsAttrOrClose
+        ) {
           matchedTagStart = true;
         }
       }
