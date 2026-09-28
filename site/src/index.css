@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --color-night: #18192d;
+  --color-deep: #121422;
+  --color-card: #1e2036;
+  --color-ink: #e8eef6;
+  --color-mute: #9aa6ba;
+  --color-cyan: #15e4c0;
+  --color-sky: #0093f3;
+  --font-sans: "Outfit", "Avenir Next", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body { @apply bg-night font-sans text-ink antialiased; }
+  ::selection { @apply bg-cyan/30; }
+  * { scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.14) transparent; }
+}
+
+.token.keyword, .token.builtin, .token.important { color: #7ec8ff; }
+.token.string, .token.attr-value, .token.char { color: #15e4c0; }
+.token.number, .token.boolean, .token.hexcode, .token.color, .token.unit { color: #f5a97f; }
+.token.property, .token.attr-name, .token.parameter, .token.selector, .token.class-name { color: #c3b5ff; }
+.token.function { color: #82aaff; }
+.token.punctuation, .token.operator { color: #7d8da3; }
+.token.tag { color: #7ec8ff; }
+.token.comment { color: #5d6a80; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
