@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pyramid Sort — short lines on top</title>
-  <meta name="description" content="Pyramid Sort orders imports, JSX attributes, types, objects, and CSS by line length. Short lines on top. Long lines underneath. Same rule in VS Code, Cursor, and the CLI.">
+  <title>Pyramid Sort</title>
+  <meta name="description" content="Pyramid Sort orders imports, JSX attributes, types, objects, and CSS by line length. The block becomes a pyramid. Same rule in VS Code, Cursor, and the CLI.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;1,9..144,500&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/site.css">
   <meta property="og:title" content="Pyramid Sort">
-  <meta property="og:description" content="Short lines on top. Long lines underneath.">
+  <meta property="og:description" content="The block becomes a pyramid.">
   <meta property="og:type" content="website">
 </head>
 <body>
@@ -30,40 +30,39 @@
     <div class="wrap hero-grid">
       <div>
         <p class="kicker">Line-length formatter</p>
-        <h1>Short lines on top. <em>Long lines underneath.</em></h1>
-        <p class="lede">Pyramid Sort reorders a block by trimmed line length, so the file reads as a shape. Imports, JSX attributes, types, objects, and CSS. The same order on save, in the CLI, and in whatever agent just edited the file.</p>
+        <h1>The block becomes <em>a pyramid.</em></h1>
+        <p class="lede">Pyramid Sort reorders a block by trimmed line length. Imports, JSX attributes, types, objects, and CSS. The same order on save, in the CLI, and in whatever agent just edited the file.</p>
         <div class="actions">
           <a class="btn btn-solid" href="https://marketplace.visualstudio.com/items?itemName=INVEON-Development.pyramid-sort">Install the extension</a>
-          <a class="btn btn-ghost" href="examples.html">See the shape</a>
+          <a class="btn btn-ghost" href="examples.html">More examples</a>
         </div>
       </div>
-      <figure class="stage" data-stage>
-        <div class="stage-bar">
-          <p>JSX attributes</p>
-          <div class="toggle">
-            <button type="button" data-view="before">Before</button>
-            <button type="button" class="is-on" data-view="after">After</button>
+      <div class="pair">
+        <figure class="stage">
+          <div class="stage-bar"><p>Before</p></div>
+          <div class="pyramid">
+            <code>className="root layout wide text dense stroke muted"</code>
+            <code>ref={ref}</code>
+            <code>type="text"</code>
+            <code>onChange={(e) =&gt; onChange(e.target.value)}</code>
+            <code>name="field-one"</code>
+            <code>value={value}</code>
+            <code>placeholder="Type here..."</code>
           </div>
-        </div>
-        <div class="pyramid" data-pane="before" hidden>
-          <code>className="root layout wide text dense stroke muted"</code>
-          <code>ref={ref}</code>
-          <code>type="text"</code>
-          <code>onChange={(e) =&gt; onChange(e.target.value)}</code>
-          <code>name="field-one"</code>
-          <code>value={value}</code>
-          <code>placeholder="Type here..."</code>
-        </div>
-        <div class="pyramid" data-pane="after">
-          <code>ref={ref}</code>
-          <code>type="text"</code>
-          <code>value={value}</code>
-          <code>name="field-one"</code>
-          <code>placeholder="Type here..."</code>
-          <code>onChange={(e) =&gt; onChange(e.target.value)}</code>
-          <code>className="root layout wide text dense stroke muted"</code>
-        </div>
-      </figure>
+        </figure>
+        <figure class="stage after">
+          <div class="stage-bar"><p>After</p></div>
+          <div class="pyramid">
+            <code>ref={ref}</code>
+            <code>type="text"</code>
+            <code>value={value}</code>
+            <code>name="field-one"</code>
+            <code>placeholder="Type here..."</code>
+            <code>onChange={(e) =&gt; onChange(e.target.value)}</code>
+            <code>className="root layout wide text dense stroke muted"</code>
+          </div>
+        </figure>
+      </div>
     </div>
   </header>
 
@@ -198,6 +197,5 @@ npx pyramid-sort src/App.tsx src/pages/home.tsx</pre>
       · <a href="about.html">Stefan Račić</a>
     </span>
   </footer>
-  <script src="assets/site.js"></script>
 </body>
 </html>
