@@ -408,7 +408,7 @@ src/legacy/**
 
 ## Installation
 
-### Marketplace
+### VS Code Marketplace
 
 Search for **Pyramid Sort** in the Extensions view, or:
 
@@ -416,10 +416,16 @@ Search for **Pyramid Sort** in the Extensions view, or:
 code --install-extension INVEON-Development.pyramid-sort
 ```
 
+https://marketplace.visualstudio.com/items?itemName=INVEON-Development.pyramid-sort
+
+### Open VSX
+
+https://open-vsx.org/extension/INVEON-Development/pyramid-sort
+
 ### VSIX
 
 ```bash
-code --install-extension pyramid-sort-0.4.2.vsix
+code --install-extension pyramid-sort-0.5.0.vsix
 ```
 
 ---

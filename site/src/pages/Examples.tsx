@@ -4,7 +4,7 @@ import { Kicker, PageHero, Reveal } from '../ui';
 
 export default function Examples() {
   return (
-    <div className="mx-auto max-w-6xl px-5">
+    <div className="mx-auto max-w-[88rem] px-5">
       <PageHero kicker="Examples" title="From jagged to pyramid.">
         Every After panel on this page is produced by the real sorter as you scroll. Press{' '}
         <strong className="text-ink">Replay</strong> to watch it again. A blank line is a group boundary, and both sides keep it.

@@ -68,5 +68,6 @@ export function ButtonLink({ href, ghost, children }: { href: string; ghost?: bo
 }
 
 export const MARKETPLACE = 'https://marketplace.visualstudio.com/items?itemName=INVEON-Development.pyramid-sort';
+export const OPEN_VSX = 'https://open-vsx.org/extension/INVEON-Development/pyramid-sort';
 export const GITHUB = 'https://github.com/racha/pyramid-sort';
 export const NPM = 'https://www.npmjs.com/package/pyramid-sort';

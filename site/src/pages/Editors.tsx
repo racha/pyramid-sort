@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { Cmd } from '../code';
-import { Mono, PageHero, Reveal } from '../ui';
+import { MARKETPLACE, Mono, OPEN_VSX, PageHero, Reveal } from '../ui';
 
 function Editor({ who, title, children }: { who: string; title: string; children: ReactNode }) {
   return (
@@ -19,7 +19,7 @@ function Editor({ who, title, children }: { who: string; title: string; children
 
 export default function Editors() {
   return (
-    <div className="mx-auto max-w-6xl px-5">
+    <div className="mx-auto max-w-[88rem] px-5">
       <PageHero kicker="Editors" title="Wherever the file is open.">
         It is a VS Code extension. Cursor loads it. Antigravity runs it and the same CLI. <Mono>.pyramidsort</Mono> is
         the shared config, so the editor and the terminal never drift apart.
@@ -28,8 +28,15 @@ export default function Editors() {
       <div className="grid gap-5">
         <Editor who="VS Code" title="On save.">
           <p>
-            Search the Marketplace for <strong className="text-ink">Pyramid Sort</strong> by{' '}
-            <Mono>INVEON-Development</Mono>.
+            Install <strong className="text-ink">Pyramid Sort</strong> by <Mono>INVEON-Development</Mono> from the{' '}
+            <a className="text-cyan underline-offset-4 hover:underline" href={MARKETPLACE} target="_blank" rel="noreferrer">
+              VS Code Marketplace
+            </a>{' '}
+            or{' '}
+            <a className="text-cyan underline-offset-4 hover:underline" href={OPEN_VSX} target="_blank" rel="noreferrer">
+              Open VSX
+            </a>
+            .
           </p>
           <Cmd code="code --install-extension INVEON-Development.pyramid-sort" />
           <p>
@@ -62,8 +69,15 @@ export default function Editors() {
         <Editor who="Antigravity" title="Same CLI. Same file.">
           <p>
             There is no separate Antigravity plugin. The Antigravity IDE is built on VS Code, so install the VSIX from the
-            Extensions view (<strong className="text-ink">Install from VSIX</strong>) or from the Marketplace if it is
-            listed.
+            Extensions view (<strong className="text-ink">Install from VSIX</strong>) or from the{' '}
+            <a className="text-cyan underline-offset-4 hover:underline" href={MARKETPLACE} target="_blank" rel="noreferrer">
+              VS Code Marketplace
+            </a>{' '}
+            or{' '}
+            <a className="text-cyan underline-offset-4 hover:underline" href={OPEN_VSX} target="_blank" rel="noreferrer">
+              Open VSX
+            </a>{' '}
+            if it is listed.
           </p>
           <Cmd code="npx pyramid-sort src/App.tsx src/pages/home.tsx" />
           <p>

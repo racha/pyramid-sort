@@ -4,7 +4,7 @@ import { useDeferredValue, useMemo, useState } from 'react';
 import { Mono } from './ui';
 import { PLAYGROUND, SAMPLES } from './samples';
 import { sortSource, type Lang } from './sorter';
-import { keyed, Lines, Panel } from './code';
+import { highlight, keyed, Lines, Panel } from './code';
 
 const LANGS: { id: Lang; label: string; sample: string }[] = [
   { id: 'typescriptreact', label: 'TSX', sample: PLAYGROUND },
@@ -50,6 +50,41 @@ function Segmented<T extends string>({
   );
 }
 
+function SourceEditor({
+  value,
+  lang,
+  onChange,
+}: {
+  value: string;
+  lang: Lang;
+  onChange: (value: string) => void;
+}) {
+  const html = useMemo(
+    () => highlight(value.endsWith('\n') ? `${value}\u200b` : value, lang),
+    [value, lang],
+  );
+  return (
+    <div className="h-[30rem] overflow-auto">
+      <div className="relative min-h-full w-max min-w-full">
+        <pre
+          aria-hidden
+          className="pointer-events-none m-0 min-h-full whitespace-pre font-mono text-[0.8rem] leading-[1.8] text-ink [tab-size:2] sm:text-[0.84rem]"
+        >
+          <code dangerouslySetInnerHTML={{ __html: html }} />
+        </pre>
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          spellCheck={false}
+          wrap="off"
+          aria-label="Code to sort"
+          className="absolute inset-0 m-0 h-full w-full resize-none overflow-hidden border-0 bg-transparent p-0 font-mono text-[0.8rem] leading-[1.8] text-transparent caret-ink outline-none [tab-size:2] selection:bg-cyan/30 sm:text-[0.84rem]"
+        />
+      </div>
+    </div>
+  );
+}
+
 export function Playground() {
   const [lang, setLang] = useState<Lang>('typescriptreact');
   const [direction, setDirection] = useState<'ascending' | 'descending'>('ascending');
@@ -87,13 +122,7 @@ export function Playground() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel label="Your code">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            spellCheck={false}
-            aria-label="Code to sort"
-            className="block h-[30rem] w-full resize-none bg-transparent font-mono text-[0.8rem] leading-[1.8] text-ink outline-none sm:text-[0.84rem]"
-          />
+          <SourceEditor value={text} lang={lang} onChange={setText} />
         </Panel>
         <Panel
           label="Pyramid Sort"

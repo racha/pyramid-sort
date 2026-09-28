@@ -7,8 +7,8 @@ import How from './pages/How';
 import Home from './pages/Home';
 import Editors from './pages/Editors';
 import Examples from './pages/Examples';
-import Developer from './pages/Developer';
-import { EASE_OUT, GITHUB, MARKETPLACE, NPM } from './ui';
+import Changelog from './pages/Changelog';
+import { EASE_OUT, GITHUB, MARKETPLACE, NPM, OPEN_VSX } from './ui';
 
 const ROUTES = [
   { path: '', label: 'Overview', title: 'Pyramid Sort — code, sorted', Page: Home },
@@ -16,7 +16,7 @@ const ROUTES = [
   { path: 'examples', label: 'Examples', title: 'Examples — Pyramid Sort', Page: Examples },
   { path: 'editors', label: 'Editors', title: 'Editors — Pyramid Sort', Page: Editors },
   { path: 'ai', label: 'AI workflow', title: 'AI workflow — Pyramid Sort', Page: Ai },
-  { path: 'developer', label: 'Developer', title: 'Developer — Pyramid Sort', Page: Developer },
+  { path: 'changelog', label: 'Changelog', title: 'Changelog — Pyramid Sort', Page: Changelog },
 ];
 
 const currentPath = () => window.location.hash.replace(/^#\/?/, '');
@@ -44,7 +44,7 @@ export default function App() {
     setMenu(false);
   }, [route]);
   useEffect(() => {
-    const wide = window.matchMedia('(min-width: 1024px)');
+    const wide = window.matchMedia('(min-width: 1280px)');
     const close = () => {
       if (wide.matches) setMenu(false);
     };
@@ -72,7 +72,7 @@ export default function App() {
       />
 
       <header className="sticky top-0 z-30 border-b border-white/10 bg-night/75 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-5 py-3">
+        <div className="mx-auto flex max-w-[88rem] items-center justify-between gap-6 px-5 py-3">
           <motion.a
             href="#/"
             initial="rest"
@@ -84,7 +84,7 @@ export default function App() {
             <Logo mode="hover" className="size-7" />
             Pyramid <span className="-ml-1.5 text-cyan">Sort</span>
           </motion.a>
-          <nav className="hidden gap-1 text-sm lg:flex">
+          <nav className="hidden gap-1 text-sm xl:flex">
             {ROUTES.map((r) => (
               <a
                 key={r.path}
@@ -104,7 +104,7 @@ export default function App() {
           </nav>
           <button
             type="button"
-            className="rounded-lg p-2 text-ink lg:hidden"
+            className="rounded-lg p-2 text-ink xl:hidden"
             aria-label="Open menu"
             aria-expanded={menu}
             onClick={() => setMenu(true)}
@@ -122,14 +122,14 @@ export default function App() {
             <motion.button
               type="button"
               aria-label="Close menu"
-              className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+              className="fixed inset-0 z-40 bg-black/60 xl:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMenu(false)}
             />
             <motion.aside
-              className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/10 bg-deep px-5 py-6 lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/10 bg-deep px-5 py-6 xl:hidden"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
@@ -174,13 +174,14 @@ export default function App() {
         </motion.main>
       </AnimatePresence>
 
-      <footer className="mx-auto mt-24 flex max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-white/10 px-5 py-8 text-sm text-mute">
-        <span>MIT · INVEON Development</span>
+      <footer className="mx-auto mt-24 flex max-w-[88rem] flex-wrap items-center justify-between gap-4 border-t border-white/10 px-5 py-8 text-sm text-mute">
+        <span>MIT · Stefan Račić · INVEON Development</span>
         <span className="flex flex-wrap gap-4">
-          <a className="hover:text-cyan" href={MARKETPLACE}>Marketplace</a>
+          <a className="hover:text-cyan" href={MARKETPLACE}>VS Code</a>
+          <a className="hover:text-cyan" href={OPEN_VSX}>Open VSX</a>
           <a className="hover:text-cyan" href={NPM}>npm</a>
           <a className="hover:text-cyan" href={GITHUB}>GitHub</a>
-          <a className="hover:text-cyan" href="#/developer">Stefan Račić</a>
+          <a className="hover:text-cyan" href="#/changelog">Changelog</a>
         </span>
       </footer>
     </div>

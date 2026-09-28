@@ -61,7 +61,7 @@ function Step({ n, title, children }: { n: number; title: ReactNode; children: R
 
 export default function Ai() {
   return (
-    <div className="mx-auto max-w-4xl px-5">
+    <div className="mx-auto max-w-[88rem] px-5">
       <PageHero kicker="AI workflow" title="The agent edits. The CLI finishes the shape.">
         Do not ask the model to sort by length. It will improvise. Point it at <Mono>npx pyramid-sort</Mono> and let{' '}
         <Mono>.pyramidsort</Mono> decide which categories run.

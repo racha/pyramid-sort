@@ -1,10 +1,10 @@
 import { motion } from 'motion/react';
 
-import { HERO } from '../samples';
 import { Logo } from '../Logo';
+import { HERO } from '../samples';
 import { Cmd, SortDemo } from '../code';
 import { Playground } from '../Playground';
-import { ButtonLink, EASE_OUT, H2, Kicker, Lead, MARKETPLACE, Mono, Reveal } from '../ui';
+import { ButtonLink, EASE_OUT, H2, Kicker, Lead, MARKETPLACE, Mono, OPEN_VSX, Reveal } from '../ui';
 
 const REASONS = [
   {
@@ -52,7 +52,7 @@ function scrollToPlayground() {
 export default function Home() {
   return (
     <>
-      <section className="mx-auto max-w-6xl px-5 pb-20 pt-14 sm:pt-20">
+      <section className="mx-auto max-w-[88rem] px-5 pb-20 pt-14 sm:pt-20">
         <motion.div
           variants={stagger}
           initial="hidden"
@@ -77,7 +77,10 @@ export default function Home() {
               short to long. The same order on save, in the CLI, and after your agent edits the file.
             </motion.p>
             <motion.div variants={rise} className="mt-8 flex flex-wrap gap-3">
-              <ButtonLink href={MARKETPLACE}>Install the extension</ButtonLink>
+              <ButtonLink href={MARKETPLACE}>Get it on VS Code</ButtonLink>
+              <ButtonLink href={OPEN_VSX} ghost>
+                Get it on Open VSX
+              </ButtonLink>
               <ButtonLink href="#/how" ghost>
                 How it works
               </ButtonLink>
@@ -105,7 +108,7 @@ export default function Home() {
       </section>
 
       <section className="border-y border-white/10 bg-deep/60">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-3 px-5 py-6 font-mono text-sm text-mute">
+        <div className="mx-auto flex max-w-[88rem] flex-wrap items-center justify-center gap-x-8 gap-y-3 px-5 py-6 font-mono text-sm text-mute">
           {WHERE.map((w, i) => (
             <motion.span
               key={w}
@@ -120,7 +123,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl gap-12 px-5 py-24 md:grid-cols-[0.85fr_1.15fr]">
+      <section className="mx-auto grid max-w-[88rem] gap-12 px-5 py-24 md:grid-cols-[0.85fr_1.15fr]">
         <Reveal>
           <Kicker>Why</Kicker>
           <H2>Order you can see.</H2>
@@ -144,7 +147,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-12">
+      <section className="mx-auto max-w-[88rem] px-5 py-12">
         <Reveal>
           <Kicker>What</Kicker>
           <H2>Five kinds of block. One rule.</H2>
@@ -170,7 +173,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="playground" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-24">
+      <section id="playground" className="mx-auto max-w-[88rem] scroll-mt-24 px-5 py-24">
         <Reveal>
           <Kicker>Playground</Kicker>
           <H2>Paste something messy.</H2>
@@ -181,7 +184,7 @@ export default function Home() {
         </Reveal>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-12">
+      <section className="mx-auto max-w-[88rem] px-5 py-12">
         <Reveal>
           <Kicker>How</Kicker>
           <H2>One file decides.</H2>
@@ -212,13 +215,21 @@ export default function Home() {
         </Reveal>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-24">
+      <section className="mx-auto max-w-[88rem] px-5 py-24">
         <Reveal>
           <div className="grid items-center gap-10 rounded-3xl border border-white/10 bg-card/60 p-8 sm:p-12 md:grid-cols-2">
             <div>
               <H2>In the editor. Or after the agent.</H2>
               <Lead>
-                Marketplace id <Mono>INVEON-Development.pyramid-sort</Mono>. The CLI sorts every path you pass and reads{' '}
+                Get the extension on the{' '}
+                <a className="text-cyan underline-offset-4 hover:underline" href={MARKETPLACE} target="_blank" rel="noreferrer">
+                  VS Code Marketplace
+                </a>{' '}
+                or{' '}
+                <a className="text-cyan underline-offset-4 hover:underline" href={OPEN_VSX} target="_blank" rel="noreferrer">
+                  Open VSX
+                </a>
+                . Id <Mono>INVEON-Development.pyramid-sort</Mono>. The CLI sorts every path you pass and reads{' '}
                 <Mono>.pyramidsort</Mono> beside each file.
               </Lead>
               <div className="mt-8 flex flex-wrap gap-3">

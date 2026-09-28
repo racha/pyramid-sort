@@ -7,7 +7,7 @@ function Rule({ n, title, children }: { n: string; title: string; children: Reac
     <Reveal>
       <section className="grid gap-4 border-t border-white/10 py-12 md:grid-cols-[5rem_1fr]">
         <span className="font-mono text-sm text-cyan">{n}</span>
-        <div className="grid max-w-3xl gap-3 text-mute">
+        <div className="grid gap-3 text-mute">
           <h2 className="text-3xl font-semibold tracking-tight text-ink">{title}</h2>
           {children}
         </div>
@@ -18,7 +18,7 @@ function Rule({ n, title, children }: { n: string; title: string; children: Reac
 
 export default function How() {
   return (
-    <div className="mx-auto max-w-5xl px-5">
+    <div className="mx-auto max-w-[88rem] px-5">
       <PageHero kicker="How it works" title="One measurement. A shape you can see.">
         Pyramid Sort does not alphabetize. It measures the trimmed length of a line and puts the short ones where your
         eye starts. The same rule runs on save, from the command palette, and from <Mono>npx pyramid-sort</Mono>.
