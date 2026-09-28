@@ -70,7 +70,7 @@ export default function Home() {
               variants={rise}
               className="text-5xl font-semibold leading-[0.98] tracking-tight text-balance sm:text-7xl"
             >
-              Code, sorted <span className="text-cyan">by shape.</span>
+              Code, <span className="text-cyan">sorted.</span>
             </motion.h1>
             <motion.p variants={rise} className="mt-5 max-w-2xl text-lg text-pretty text-mute sm:text-xl">
               Pyramid Sort orders imports, JSX attributes, types, objects, and CSS by line length. Every block reads
@@ -78,6 +78,9 @@ export default function Home() {
             </motion.p>
             <motion.div variants={rise} className="mt-8 flex flex-wrap gap-3">
               <ButtonLink href={MARKETPLACE}>Install the extension</ButtonLink>
+              <ButtonLink href="#/how" ghost>
+                How it works
+              </ButtonLink>
               <motion.button
                 type="button"
                 onClick={scrollToPlayground}

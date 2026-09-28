@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 
 import Ai from './pages/Ai';
 import { Logo } from './Logo';
+import How from './pages/How';
 import Home from './pages/Home';
 import Editors from './pages/Editors';
 import Examples from './pages/Examples';
@@ -10,7 +11,8 @@ import Developer from './pages/Developer';
 import { EASE_OUT, GITHUB, MARKETPLACE, NPM } from './ui';
 
 const ROUTES = [
-  { path: '', label: 'Overview', title: 'Pyramid Sort — code, sorted by shape', Page: Home },
+  { path: '', label: 'Overview', title: 'Pyramid Sort — code, sorted', Page: Home },
+  { path: 'how', label: 'How it works', title: 'How it works — Pyramid Sort', Page: How },
   { path: 'examples', label: 'Examples', title: 'Examples — Pyramid Sort', Page: Examples },
   { path: 'editors', label: 'Editors', title: 'Editors — Pyramid Sort', Page: Editors },
   { path: 'ai', label: 'AI workflow', title: 'AI workflow — Pyramid Sort', Page: Ai },
