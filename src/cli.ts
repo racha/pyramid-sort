@@ -42,8 +42,33 @@ function isDirectory(p: string): boolean {
   }
 }
 
+class CliExit extends Error {
+  constructor(readonly code: number) {
+    super(`CLI exit ${code}`);
+    this.name = 'CliExit';
+  }
+}
+
+function halt(code: number): never {
+  throw new CliExit(code);
+}
+
+interface CliFlags {
+  directionOverride: SortDirection | undefined;
+  allCategories: boolean;
+  anyOnly: boolean;
+  importsOnly: boolean;
+  attributesOnly: boolean;
+  typesOnly: boolean;
+  objectsOnly: boolean;
+  cssOnly: boolean;
+}
+
 function printUsage() {
-  console.log(`Usage: pyramid-sort <file-or-dir> [options]
+  console.log(`Usage: pyramid-sort <file-or-dir>... [options]
+
+Sorts every path, in order. Categories follow the nearest .pyramidsort
+(sort*OnSave) unless a --*-only flag or --all-categories is set.
 
 Options:
   --ascending       Force ascending sort direction
@@ -54,8 +79,8 @@ Options:
   --objects-only    Sort only object literals
   --css-only        Sort only CSS rule blocks
   --scan            Scan files for sort issues (Markdown report to stdout)
-  --sort-all        Sort every matching file under a directory (or one file)
-  --all-categories  With --sort-all: sort all categories (ignore sort*OnSave in rc)
+  --sort-all        Sort every matching file under a directory (or the given files)
+  --all-categories  Sort all categories (ignore sort*OnSave in .pyramidsort)
   --check           With --sort-all: do not write; exit 1 if any file would change
   --out=<path>      Write report or summary to a file (optional)
   --help            Show this help message`);
@@ -175,61 +200,82 @@ function maybeWriteOut(outPath: string | undefined, content: string) {
   }
 }
 
-function runSingleFileSort(
-  resolvedPath: string,
-  config: PyramidSortConfig,
-  directionOverride: SortDirection | undefined,
-  anyOnly: boolean,
-  importsOnly: boolean,
-  attributesOnly: boolean,
-  typesOnly: boolean,
-  objectsOnly: boolean,
-  cssOnly: boolean
-) {
+function categoriesEnabled(resolvedPaths: string[], flags: CliFlags): boolean {
+  for (const resolved of resolvedPaths) {
+    const start = isDirectory(resolved) ? resolved : path.dirname(resolved);
+    const mode = resolveCliSortMode(
+      resolvePyramidSortConfig(start),
+      flags.allCategories,
+      flags.anyOnly,
+      flags.importsOnly,
+      flags.attributesOnly,
+      flags.typesOnly,
+      flags.objectsOnly,
+      flags.cssOnly
+    );
+    if (mode.imports || mode.attributes || mode.types || mode.objects || mode.css) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function collectFromPaths(resolvedPaths: string[]): { files: string[]; relRoot: string } {
+  const files: string[] = [];
+  const seen = new Set<string>();
+  for (const resolved of resolvedPaths) {
+    const start = isDirectory(resolved) ? resolved : path.dirname(resolved);
+    const listConfig = resolvePyramidSortConfig(start);
+    for (const fp of collectBatchFiles(resolved, listConfig.extensions)) {
+      if (seen.has(fp)) continue;
+      seen.add(fp);
+      files.push(fp);
+    }
+  }
+  const relRoot =
+    resolvedPaths.length === 1 ? reportRootForRelative(resolvedPaths[0]) : process.cwd();
+  return { files, relRoot };
+}
+
+/** Rewrite one file. Skips unsupported, ignored, or extension-filtered paths. */
+function sortExplicitFile(resolvedPath: string, flags: CliFlags): 'changed' | 'unchanged' | 'skipped' {
+  const config = resolvePyramidSortConfig(path.dirname(resolvedPath));
   const ext = path.extname(resolvedPath).toLowerCase();
   const languageId = SUPPORTED_EXTENSIONS[ext];
-  if (!languageId) {
-    process.exit(0);
-  }
+  if (!languageId) return 'skipped';
 
   const allowed = config.extensions.map(normExt);
   const stylesheet = ['.css', '.scss', '.less'].includes(ext);
-  if (!allowed.includes(ext) && !stylesheet) {
-    process.exit(0);
-  }
-
-  if (isPyramidSortIgnored(resolvedPath)) {
-    process.exit(0);
-  }
+  if (!allowed.includes(ext) && !stylesheet) return 'skipped';
+  if (isPyramidSortIgnored(resolvedPath)) return 'skipped';
 
   const source = fs.readFileSync(resolvedPath, 'utf-8');
-  const opts = cfgToPipelineOpts(config, resolvedPath, directionOverride);
-  const mode: SortModeFlags = anyOnly
-    ? {
-        imports: importsOnly,
-        attributes: attributesOnly,
-        types: typesOnly,
-        objects: objectsOnly,
-        css: cssOnly,
-      }
-    : {
-        imports: true,
-        attributes: true,
-        types: true,
-        objects: true,
-        css: true,
-      };
-
-  const { result } = sortFileSource(source, languageId, mode, opts);
+  const mode = resolveCliSortMode(
+    config,
+    flags.allCategories,
+    flags.anyOnly,
+    flags.importsOnly,
+    flags.attributesOnly,
+    flags.typesOnly,
+    flags.objectsOnly,
+    flags.cssOnly
+  );
+  const { result } = sortFileSource(
+    source,
+    languageId,
+    mode,
+    cfgToPipelineOpts(config, resolvedPath, flags.directionOverride)
+  );
+  if (result === source) return 'unchanged';
   fs.writeFileSync(resolvedPath, result, 'utf-8');
+  return 'changed';
 }
 
-function main() {
-  const args = process.argv.slice(2);
+function execute(args: string[]): void {
 
   if (args.includes('--help') || args.length === 0) {
     printUsage();
-    process.exit(0);
+    halt(0);
   }
 
   const outArg = args.find((a) => a.startsWith('--out='));
@@ -254,46 +300,54 @@ function main() {
   const anyOnly =
     importsOnly || attributesOnly || typesOnly || objectsOnly || cssOnly;
 
-  const filePath = args.find((a) => !a.startsWith('--'));
-  if (!filePath) {
+  const flags: CliFlags = {
+    directionOverride,
+    allCategories,
+    anyOnly,
+    importsOnly,
+    attributesOnly,
+    typesOnly,
+    objectsOnly,
+    cssOnly,
+  };
+
+  const rawPaths = args.filter((a) => !a.startsWith('--'));
+  if (rawPaths.length === 0) {
     console.error('Error: No file or directory path provided.');
     printUsage();
-    process.exit(1);
+    halt(1);
   }
 
-  const resolvedPath = path.resolve(filePath);
-  if (!fs.existsSync(resolvedPath)) {
-    console.error(`Error: Path not found: ${resolvedPath}`);
-    process.exit(1);
+  const missing = rawPaths.filter((p) => !fs.existsSync(path.resolve(p)));
+  if (missing.length > 0) {
+    for (const p of missing) {
+      console.error(`Error: Path not found: ${path.resolve(p)}`);
+    }
+    halt(1);
   }
 
-  const batch = scan || sortAll || isDirectory(resolvedPath);
-
-  if (isDirectory(resolvedPath) && !scan && !sortAll) {
-    console.error('Error: Directory requires --scan or --sort-all.');
+  const resolvedPaths = rawPaths.map((p) => path.resolve(p));
+  const directories = resolvedPaths.filter((p) => isDirectory(p));
+  if (!scan && !sortAll && directories.length > 0) {
+    for (const dir of directories) {
+      console.error(`Error: Directory requires --scan or --sort-all: ${dir}`);
+    }
     printUsage();
-    process.exit(1);
+    halt(1);
   }
 
-  if (!batch) {
-    const config = resolvePyramidSortConfig(path.dirname(resolvedPath));
-    runSingleFileSort(
-      resolvedPath,
-      config,
-      directionOverride,
-      anyOnly,
-      importsOnly,
-      attributesOnly,
-      typesOnly,
-      objectsOnly,
-      cssOnly
-    );
+  if (!scan && !sortAll) {
+    const changed: string[] = [];
+    for (let i = 0; i < resolvedPaths.length; i++) {
+      if (sortExplicitFile(resolvedPaths[i], flags) === 'changed') changed.push(rawPaths[i]);
+    }
+    if (rawPaths.length > 1) {
+      for (const file of changed) console.log(file);
+    }
     return;
   }
 
-  const listConfig = resolvePyramidSortConfig(isDirectory(resolvedPath) ? resolvedPath : path.dirname(resolvedPath));
-  const files = collectBatchFiles(resolvedPath, listConfig.extensions);
-  const relRoot = reportRootForRelative(resolvedPath);
+  const { files, relRoot } = collectFromPaths(resolvedPaths);
 
   if (scan) {
     const scanRows: ScanReportFileRow[] = [];
@@ -338,7 +392,7 @@ function main() {
     const { markdown, totalIssues } = buildScanReportMarkdown(relRoot, scanRows, files.length);
     console.log(markdown);
     maybeWriteOut(outPath, markdown);
-    process.exit(totalIssues > 0 ? 1 : 0);
+    halt(totalIssues > 0 ? 1 : 0);
   }
 
   if (sortAll) {
@@ -346,27 +400,11 @@ function main() {
       console.warn('Warning: --all-categories ignored when --*-only flags are set.');
     }
 
-    const probeMode = resolveCliSortMode(
-      listConfig,
-      allCategories,
-      anyOnly,
-      importsOnly,
-      attributesOnly,
-      typesOnly,
-      objectsOnly,
-      cssOnly
-    );
-    if (
-      !probeMode.imports &&
-      !probeMode.attributes &&
-      !probeMode.types &&
-      !probeMode.objects &&
-      !probeMode.css
-    ) {
+    if (!categoriesEnabled(resolvedPaths, flags)) {
       console.error(
         'Error: No sort categories enabled. Use --all-categories or set sortImportsOnSave / sortAttributesOnSave / … in .pyramidsort.'
       );
-      process.exit(1);
+      halt(1);
     }
 
     const sortRows: SortReportFileRow[] = [];
@@ -417,8 +455,21 @@ function main() {
     const { markdown } = buildSortReportMarkdown(relRoot, files.length, sortRows);
     console.log(markdown);
     maybeWriteOut(outPath, markdown);
-    process.exit(check && wouldChange > 0 ? 1 : 0);
+    halt(check && wouldChange > 0 ? 1 : 0);
   }
 }
 
-main();
+/** Run the CLI. Returns the process exit code. Does not call `process.exit`. */
+export function runCli(argv: string[]): number {
+  try {
+    execute(argv);
+    return 0;
+  } catch (err) {
+    if (err instanceof CliExit) return err.code;
+    throw err;
+  }
+}
+
+if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module) {
+  process.exit(runCli(process.argv.slice(2)));
+}

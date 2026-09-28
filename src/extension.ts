@@ -997,13 +997,20 @@ export function activate(context: vscode.ExtensionContext) {
 description: Run Pyramid Sort formatter
 globs: *.{ts,tsx,js,jsx,css,scss,vue,svelte,astro,html,mdx}
 ---
-When asked to format or sort the codebase using Pyramid Sort, or after making large structural changes to imports or attributes, you can run the following shell command to sort the entire workspace:
+After editing files, sort every edited path in one CLI call. Which categories run comes from the nearest \`.pyramidsort\` (\`sort*OnSave\`). Do not pass \`--imports-only\` or \`--attributes-only\` unless you mean to override that file.
+
+\`\`\`bash
+npx pyramid-sort src/components/form/fields/InputField.tsx src/pages/dashboard/test.tsx
+\`\`\`
+
+To sort the whole workspace using the same \`.pyramidsort\` category toggles:
 
 \`\`\`bash
 npx pyramid-sort . --sort-all
 \`\`\`
 
-To scan the workspace for issues without fixing them, run:
+To scan without writing:
+
 \`\`\`bash
 npx pyramid-sort . --scan
 \`\`\`

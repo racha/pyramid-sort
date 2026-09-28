@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0] - 2026-09-28
+
+### Fixed
+
+- Fixed CLI dropping extra file paths
+
+### Changed
+
+- Changed Setup AI Hook rule
+
+### BREAKING
+
+- BREAKING CLI file sort follows `.pyramidsort` sort-on-save toggles
+
 ## [0.4.10] - 2026-09-16
 
 ### Changed

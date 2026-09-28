@@ -38,8 +38,8 @@ For **imports**, **attributes**, **types**, **objects**, and **CSS**, you can se
 
 ### CLI and AI workflows
 
-- **`npx pyramid-sort <file>`** — Same sorting pipeline with flags (`--imports-only`, `--attributes-only`, `--types-only`, `--objects-only`, `--css-only`, `--ascending`, `--descending`).
-- **Agent hook** — Command **Pyramid Sort: Setup AI Hook** writes a Cursor / VS Code hook config that runs the CLI after tool use.
+- **`npx pyramid-sort <file>...`** — Same sorting pipeline. Every path is sorted. Categories follow `.pyramidsort` unless a `--*-only` flag or `--all-categories` is set.
+- **Agent hook** — Command **Pyramid Sort: Setup AI Hook** writes a Cursor rule that runs `npx pyramid-sort` on the edited files. Categories come from `.pyramidsort`.
 
 ---
 
@@ -302,7 +302,8 @@ Run **Pyramid Sort: Setup AI Hook**. It creates `.github/hooks/pyramid-sort.json
 ### CLI
 
 ```bash
-npx pyramid-sort <file>
+npx pyramid-sort <file>...
+npx pyramid-sort a.tsx b.tsx c.tsx
 npx pyramid-sort <file> --ascending
 npx pyramid-sort <file> --descending
 npx pyramid-sort <file> --imports-only
@@ -310,7 +311,12 @@ npx pyramid-sort <file> --attributes-only
 npx pyramid-sort <file> --types-only
 npx pyramid-sort <file> --objects-only
 npx pyramid-sort <file> --css-only
+npx pyramid-sort <file> --all-categories
 ```
+
+Every positional path is sorted, in order. A missing path exits **1** and names that path; nothing is written. With more than one path, changed files are printed.
+
+Categories follow the nearest **`.pyramidsort`** `sort*OnSave` values. `--imports-only` and the other `--*-only` flags override that. **`--all-categories`** sorts every category.
 
 ### Workspace-wide scan and sort
 
