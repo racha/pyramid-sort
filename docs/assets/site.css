@@ -167,8 +167,8 @@ h1 em {
   font-weight: 560;
   border: 1px solid transparent;
 }
-.btn-solid { background: var(--bar); color: #071018; }
-.btn-solid:hover { filter: brightness(1.08); }
+.btn-solid { background: var(--cyan); color: #071018; }
+.btn-solid:hover { background: #3cf0d0; }
 .btn-ghost { border-color: rgba(232, 238, 246, 0.28); color: var(--ink); }
 .btn-ghost.dark, .paper .btn-ghost { border-color: var(--line); color: var(--ink); }
 .btn-ghost:hover { border-color: currentColor; }
@@ -182,23 +182,22 @@ h1 em {
 }
 .stage-bar { margin-bottom: 0.7rem; }
 .stage-bar p { margin: 0; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: #8ea0b8; }
-.pyramid { margin: 0; overflow-x: auto; padding: 0.4rem 0.2rem 0.6rem; container-type: inline-size; }
+.pyramid { margin: 0; overflow-x: auto; padding: 0.2rem 0.4rem 0.4rem; }
 .pyramid code {
   display: block;
-  width: fit-content;
-  max-width: 100%;
-  margin: 0.28rem 0;
-  padding: 0.2rem 0.7rem;
   white-space: pre;
-  font-size: 0.78rem;
-  line-height: 1.35;
-  color: #071018;
-  border-radius: 999px;
-  background-image: var(--bar);
-  background-size: 100cqi 100%;
-  background-repeat: no-repeat;
+  font-size: 0.82rem;
+  line-height: 1.75;
+  color: #d6deea;
 }
-.pyramid code.gap { height: 0.55rem; margin: 0.2rem 0; padding: 0; background: none; box-shadow: none; }
+.pyramid code.gap { height: 0.7rem; }
+.token.keyword, .token.builtin { color: #7ec8ff; }
+.token.string, .token.attr-value { color: #15e4c0; }
+.token.number, .token.boolean, .token.hexcode, .token.color { color: #f5a97f; }
+.token.property, .token.attr-name, .token.parameter { color: #c3b5ff; }
+.token.function { color: #82aaff; }
+.token.punctuation, .token.operator { color: #7d8da3; }
+.token.comment { color: #5d6a80; }
 
 section { padding: 4.5rem 0; }
 h2 { font-size: clamp(2.1rem, 4vw, 3.3rem); line-height: 1.02; margin: 0 0 0.8rem; }
