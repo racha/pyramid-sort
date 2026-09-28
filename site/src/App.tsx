@@ -36,9 +36,33 @@ function useRoute() {
 
 export default function App() {
   const route = useRoute();
+  const [menu, setMenu] = useState(false);
   useEffect(() => {
     document.title = route.title;
   }, [route]);
+  useEffect(() => {
+    setMenu(false);
+  }, [route]);
+  useEffect(() => {
+    const wide = window.matchMedia('(min-width: 1024px)');
+    const close = () => {
+      if (wide.matches) setMenu(false);
+    };
+    wide.addEventListener('change', close);
+    return () => wide.removeEventListener('change', close);
+  }, []);
+  useEffect(() => {
+    if (!menu) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenu(false);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [menu]);
 
   return (
     <div className="min-h-screen overflow-x-clip">
@@ -48,7 +72,7 @@ export default function App() {
       />
 
       <header className="sticky top-0 z-30 border-b border-white/10 bg-night/75 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-5 py-3">
           <motion.a
             href="#/"
             initial="rest"
@@ -60,7 +84,7 @@ export default function App() {
             <Logo mode="hover" className="size-7" />
             Pyramid <span className="-ml-1.5 text-cyan">Sort</span>
           </motion.a>
-          <nav className="-mx-2 flex max-w-full gap-1 overflow-x-auto whitespace-nowrap px-2 text-sm sm:mx-0 sm:px-0">
+          <nav className="hidden gap-1 text-sm lg:flex">
             {ROUTES.map((r) => (
               <a
                 key={r.path}
@@ -78,8 +102,65 @@ export default function App() {
               </a>
             ))}
           </nav>
+          <button
+            type="button"
+            className="rounded-lg p-2 text-ink lg:hidden"
+            aria-label="Open menu"
+            aria-expanded={menu}
+            onClick={() => setMenu(true)}
+          >
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+              <path d="M3 6h16M3 11h16M3 16h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
       </header>
+
+      <AnimatePresence>
+        {menu && (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close menu"
+              className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMenu(false)}
+            />
+            <motion.aside
+              className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/10 bg-deep px-5 py-6 lg:hidden"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+            >
+              <div className="mb-8 flex items-center justify-between">
+                <span className="font-semibold tracking-tight">
+                  Pyramid <span className="text-cyan">Sort</span>
+                </span>
+                <button type="button" className="rounded-lg p-2" aria-label="Close menu" onClick={() => setMenu(false)}>
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                    <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+              <nav className="grid gap-1 text-lg">
+                {ROUTES.map((r) => (
+                  <a
+                    key={r.path}
+                    href={`#/${r.path}`}
+                    onClick={() => setMenu(false)}
+                    className={`rounded-xl px-3 py-3 ${r === route ? 'bg-white/[0.07] text-cyan' : 'text-ink'}`}
+                  >
+                    {r.label}
+                  </a>
+                ))}
+              </nav>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence mode="wait">
         <motion.main
