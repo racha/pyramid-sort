@@ -1,6 +1,8 @@
 # Pyramid Sort
 
-**Pyramid Sort** is a VS Code extension (and CLI) that sorts code by **trimmed line length** so short lines sit at the top and long lines at the bottom — a readable “pyramid” layout. Site: [racha.github.io/pyramid-sort](https://racha.github.io/pyramid-sort/).
+**Pyramid Sort** is a VS Code extension (and CLI) that sorts code by **trimmed line length** so short lines sit at the top and long lines at the bottom — a readable “pyramid” layout.
+
+**More:** examples, VS Code / Cursor / Antigravity setup, and the AI workflow — [racha.github.io/pyramid-sort](https://racha.github.io/pyramid-sort/).
 
 It covers **imports**, **JSX/HTML attributes**, **type / interface / enum** bodies, **object literals**, and **CSS / SCSS / Less** declarations inside rule blocks. Optional **force sort** reorders any selection by line length with no parsing. **Blank lines** can separate independent sort groups everywhere that applies.
 

@@ -9,6 +9,7 @@
 ### Changed
 
 - Changed Setup AI Hook rule
+- Changed README
 
 ### BREAKING
 
