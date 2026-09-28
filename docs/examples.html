@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Examples — Pyramid Sort</title>
+  <meta name="description" content="Before and after: imports, JSX attributes, types, objects, and CSS sorted by line length.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;1,9..144,500&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <header class="top">
+    <a class="mark" href="index.html">Pyramid <span>Sort</span></a>
+    <nav>
+      <a href="index.html">Overview</a>
+      <a class="here" href="examples.html">Examples</a>
+      <a href="editors.html">Editors</a>
+      <a href="ai.html">AI workflow</a>
+      <a href="about.html">Developer</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <header class="page-hero">
+      <p class="kicker" style="color: var(--copper)">Examples</p>
+      <h1>The jagged block, then the wedge.</h1>
+      <p class="section-lead">Each line is drawn as wide as it is long. Ascending puts the short line on top. A blank line is a group boundary, and both sides keep it.</p>
+    </header>
+
+    <article class="example">
+      <h2>Imports</h2>
+      <p class="section-lead">External packages, then local and alias paths. Length sort happens inside each group.</p>
+      <figure class="stage" data-stage>
+        <div class="stage-bar">
+          <p>ascending</p>
+          <div class="toggle">
+            <button type="button" class="is-on" data-view="before">Before</button>
+            <button type="button" data-view="after">After</button>
+          </div>
+        </div>
+        <div class="pyramid" data-pane="before">
+          <code>import { c } from "vendor-long-name";</code>
+          <code>import { a } from "v";</code>
+          <code>import { bb } from "vm";</code>
+          <code>import { ddd } from "vnode";</code>
+          <code>import { eeee } from "vend";</code>
+          <code class="gap"></code>
+          <code>import { x } from "@/a";</code>
+          <code>import { yy } from "@/bb";</code>
+          <code>import { zzz } from "@/ccc";</code>
+          <code>import { wwww } from "@/long";</code>
+        </div>
+        <div class="pyramid" data-pane="after" hidden>
+          <code>import { a } from "v";</code>
+          <code>import { bb } from "vm";</code>
+          <code>import { ddd } from "vnode";</code>
+          <code>import { eeee } from "vend";</code>
+          <code>import { c } from "vendor-long-name";</code>
+          <code class="gap"></code>
+          <code>import { x } from "@/a";</code>
+          <code>import { yy } from "@/bb";</code>
+          <code>import { zzz } from "@/ccc";</code>
+          <code>import { wwww } from "@/long";</code>
+        </div>
+      </figure>
+    </article>
+
+    <article class="example">
+      <h2>Attributes</h2>
+      <p class="section-lead">Multiline tags only. A spread such as <span class="mono">{...props}</span> stays fixed. Named attributes sort on either side and do not cross it.</p>
+      <figure class="stage" data-stage>
+        <div class="stage-bar">
+          <p>ascending</p>
+          <div class="toggle">
+            <button type="button" class="is-on" data-view="before">Before</button>
+            <button type="button" data-view="after">After</button>
+          </div>
+        </div>
+        <div class="pyramid" data-pane="before">
+          <code>className="root layout wide text dense stroke muted"</code>
+          <code>ref={ref}</code>
+          <code>type="text"</code>
+          <code>onChange={(e) =&gt; onChange(e.target.value)}</code>
+          <code>name="field-one"</code>
+          <code>value={value}</code>
+          <code>placeholder="Type here..."</code>
+        </div>
+        <div class="pyramid" data-pane="after" hidden>
+          <code>ref={ref}</code>
+          <code>type="text"</code>
+          <code>value={value}</code>
+          <code>name="field-one"</code>
+          <code>placeholder="Type here..."</code>
+          <code>onChange={(e) =&gt; onChange(e.target.value)}</code>
+          <code>className="root layout wide text dense stroke muted"</code>
+        </div>
+      </figure>
+    </article>
+
+    <article class="example">
+      <h2>Types</h2>
+      <p class="section-lead">The blank line stays. Each side sorts on its own.</p>
+      <figure class="stage" data-stage>
+        <div class="stage-bar">
+          <p>ascending · groups kept</p>
+          <div class="toggle">
+            <button type="button" class="is-on" data-view="before">Before</button>
+            <button type="button" data-view="after">After</button>
+          </div>
+        </div>
+        <div class="pyramid" data-pane="before">
+          <code>veryLongPropertyName: boolean;</code>
+          <code>short: boolean;</code>
+          <code>mediumName: boolean;</code>
+          <code class="gap"></code>
+          <code>longPropName: boolean;</code>
+          <code>tiny: boolean;</code>
+          <code>midProp: boolean;</code>
+        </div>
+        <div class="pyramid" data-pane="after" hidden>
+          <code>short: boolean;</code>
+          <code>mediumName: boolean;</code>
+          <code>veryLongPropertyName: boolean;</code>
+          <code class="gap"></code>
+          <code>tiny: boolean;</code>
+          <code>midProp: boolean;</code>
+          <code>longPropName: boolean;</code>
+        </div>
+      </figure>
+    </article>
+
+    <article class="example">
+      <h2>Objects</h2>
+      <figure class="stage" data-stage>
+        <div class="stage-bar">
+          <p>ascending · groups kept</p>
+          <div class="toggle">
+            <button type="button" class="is-on" data-view="before">Before</button>
+            <button type="button" data-view="after">After</button>
+          </div>
+        </div>
+        <div class="pyramid" data-pane="before">
+          <code>longKeyName: 5000,</code>
+          <code>a: 1,</code>
+          <code>midKey: 2,</code>
+          <code>url: "https://example.test",</code>
+          <code class="gap"></code>
+          <code>obj: { k: "v" },</code>
+          <code>done: true,</code>
+        </div>
+        <div class="pyramid" data-pane="after" hidden>
+          <code>a: 1,</code>
+          <code>midKey: 2,</code>
+          <code>longKeyName: 5000,</code>
+          <code>url: "https://example.test",</code>
+          <code class="gap"></code>
+          <code>done: true,</code>
+          <code>obj: { k: "v" },</code>
+        </div>
+      </figure>
+    </article>
+
+    <article class="example">
+      <h2>CSS</h2>
+      <p class="section-lead">Declarations inside the rule. The selector stays the selector.</p>
+      <figure class="stage" data-stage>
+        <div class="stage-bar">
+          <p>ascending</p>
+          <div class="toggle">
+            <button type="button" class="is-on" data-view="before">Before</button>
+            <button type="button" data-view="after">After</button>
+          </div>
+        </div>
+        <div class="pyramid" data-pane="before">
+          <code>background-color: #fff;</code>
+          <code>padding: 16px;</code>
+          <code>border-radius: 8px;</code>
+          <code class="gap"></code>
+          <code>font-size: 14px;</code>
+          <code>color: #ccc;</code>
+        </div>
+        <div class="pyramid" data-pane="after" hidden>
+          <code>padding: 16px;</code>
+          <code>border-radius: 8px;</code>
+          <code>background-color: #fff;</code>
+          <code class="gap"></code>
+          <code>color: #ccc;</code>
+          <code>font-size: 14px;</code>
+        </div>
+      </figure>
+    </article>
+  </main>
+
+  <footer class="wrap foot">
+    <span>MIT · INVEON Development</span>
+    <span><a href="https://github.com/racha/pyramid-sort">GitHub</a> · <a href="about.html">Stefan Račić</a></span>
+  </footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>
