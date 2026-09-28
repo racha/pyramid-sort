@@ -54,7 +54,7 @@ code, pre, .mono { font-family: var(--mono); }
   text-decoration: none;
   letter-spacing: -0.03em;
 }
-.mark img { width: 28px; height: 28px; display: block; }
+.mark svg { width: 28px; height: 28px; display: block; }
 .mark span {
   background: var(--bar);
   -webkit-background-clip: text;
@@ -87,47 +87,16 @@ nav a.here, nav a:hover { color: var(--cyan); }
   align-items: center;
 }
 .logo-hero { width: 220px; height: 220px; display: block; }
-.logo-hero .b {
-  animation-duration: 4.6s;
-  animation-timing-function: cubic-bezier(.45, 0, .2, 1);
-  animation-iteration-count: infinite;
-  animation-fill-mode: both;
+.logo-hero .b { animation: logo-sort 8s cubic-bezier(.65, 0, .35, 1) infinite both; }
+.mark:hover .b, .mark:focus-visible .b { animation: logo-shuffle 1.6s cubic-bezier(.65, 0, .35, 1) infinite; }
+@keyframes logo-sort {
+  0%, 18% { transform: translateY(var(--dy)); }
+  42%, 88% { transform: none; }
+  100% { transform: translateY(var(--dy)); }
 }
-.logo-hero .b0 { animation-name: logo-a0; }
-.logo-hero .b1 { animation-name: logo-a1; animation-delay: .07s; }
-.logo-hero .b2 { animation-name: logo-a2; animation-delay: .14s; }
-.logo-hero .b3 { animation-name: logo-a3; animation-delay: .21s; }
-.logo-hero .b4 { animation-name: logo-a4; animation-delay: .28s; }
-.logo-hero .b5 { animation-name: logo-a5; animation-delay: .35s; }
-@keyframes logo-a0 {
-  0%, 12% { x: 17px; width: 94px; }
-  38%, 76% { x: 53px; width: 22px; }
-  100% { x: 17px; width: 94px; }
-}
-@keyframes logo-a1 {
-  0%, 12% { x: 53px; width: 22px; }
-  38%, 76% { x: 46px; width: 36px; }
-  100% { x: 53px; width: 22px; }
-}
-@keyframes logo-a2 {
-  0%, 12% { x: 25px; width: 78px; }
-  38%, 76% { x: 39px; width: 50px; }
-  100% { x: 25px; width: 78px; }
-}
-@keyframes logo-a3 {
-  0%, 12% { x: 46px; width: 36px; }
-  38%, 76% { x: 32px; width: 64px; }
-  100% { x: 46px; width: 36px; }
-}
-@keyframes logo-a4 {
-  0%, 12% { x: 32px; width: 64px; }
-  38%, 76% { x: 25px; width: 78px; }
-  100% { x: 32px; width: 64px; }
-}
-@keyframes logo-a5 {
-  0%, 12% { x: 39px; width: 50px; }
-  38%, 76% { x: 17px; width: 94px; }
-  100% { x: 39px; width: 50px; }
+@keyframes logo-shuffle {
+  0%, 100% { transform: none; }
+  35%, 50% { transform: translateY(var(--dy)); }
 }
 .pair {
   display: grid;
@@ -303,5 +272,5 @@ pre.cmd .c { color: #7d8da3; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .logo-hero .b { animation: none; }
+  .logo-hero .b, .mark:hover .b, .mark:focus-visible .b { animation: none; }
 }
