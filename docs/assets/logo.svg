@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <style>
+    .b {
+      animation-duration: 4.6s;
+      animation-timing-function: cubic-bezier(.45, 0, .2, 1);
+      animation-iteration-count: infinite;
+      animation-fill-mode: backwards;
+    }
+    .b0 { animation-name: a0; }
+    .b1 { animation-name: a1; animation-delay: .07s; }
+    .b2 { animation-name: a2; animation-delay: .14s; }
+    .b3 { animation-name: a3; animation-delay: .21s; }
+    .b4 { animation-name: a4; animation-delay: .28s; }
+    .b5 { animation-name: a5; animation-delay: .35s; }
+    @keyframes a0 {
+      0%, 12% { x: 17px; width: 94px; }
+      38%, 76% { x: 53px; width: 22px; }
+      100% { x: 17px; width: 94px; }
+    }
+    @keyframes a1 {
+      0%, 12% { x: 53px; width: 22px; }
+      38%, 76% { x: 46px; width: 36px; }
+      100% { x: 53px; width: 22px; }
+    }
+    @keyframes a2 {
+      0%, 12% { x: 25px; width: 78px; }
+      38%, 76% { x: 39px; width: 50px; }
+      100% { x: 25px; width: 78px; }
+    }
+    @keyframes a3 {
+      0%, 12% { x: 46px; width: 36px; }
+      38%, 76% { x: 32px; width: 64px; }
+      100% { x: 46px; width: 36px; }
+    }
+    @keyframes a4 {
+      0%, 12% { x: 32px; width: 64px; }
+      38%, 76% { x: 25px; width: 78px; }
+      100% { x: 32px; width: 64px; }
+    }
+    @keyframes a5 {
+      0%, 12% { x: 39px; width: 50px; }
+      38%, 76% { x: 17px; width: 94px; }
+      100% { x: 39px; width: 50px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .b { animation: none; }
+    }
+  </style>
+  <rect width="128" height="128" rx="28" fill="#18192d"/>
+  <defs>
+    <linearGradient id="g" x1="17" y1="64" x2="110" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#15e4c0"/>
+      <stop offset="1" stop-color="#0093f3"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#g)">
+    <rect class="b b0" x="53" y="25" width="22" height="8" rx="4"/>
+    <rect class="b b1" x="46" y="39" width="36" height="8" rx="4"/>
+    <rect class="b b2" x="39" y="53" width="50" height="8" rx="4"/>
+    <rect class="b b3" x="32" y="67" width="64" height="8" rx="4"/>
+    <rect class="b b4" x="25" y="81" width="78" height="8" rx="4"/>
+    <rect class="b b5" x="17" y="95" width="94" height="8" rx="4"/>
+  </g>
+</svg>

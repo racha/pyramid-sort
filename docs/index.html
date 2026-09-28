@@ -16,7 +16,7 @@
 </head>
 <body>
   <header class="top">
-    <a class="mark" href="index.html"><img src="favicon.svg" alt="">Pyramid <span>Sort</span></a>
+    <a class="mark" href="index.html"><img src="assets/logo.svg" alt="">Pyramid <span>Sort</span></a>
     <nav>
       <a class="here" href="index.html">Overview</a>
       <a href="examples.html">Examples</a>
@@ -28,13 +28,32 @@
 
   <header class="hero">
     <div class="wrap hero-grid">
-      <div>
-        <p class="kicker">Line-length formatter</p>
-        <h1>The block becomes <em>a pyramid.</em></h1>
-        <p class="lede">Pyramid Sort reorders a block by trimmed line length. Imports, JSX attributes, types, objects, and CSS. The same order on save, in the CLI, and in whatever agent just edited the file.</p>
-        <div class="actions">
-          <a class="btn btn-solid" href="https://marketplace.visualstudio.com/items?itemName=INVEON-Development.pyramid-sort">Install the extension</a>
-          <a class="btn btn-ghost" href="examples.html">More examples</a>
+      <div class="hero-top">
+        <svg class="logo-hero" viewBox="0 0 128 128" role="img" aria-label="Pyramid Sort">
+          <rect width="128" height="128" rx="28" fill="#18192d"/>
+          <defs>
+            <linearGradient id="logo-g" x1="17" y1="64" x2="110" y2="64" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#15e4c0"/>
+              <stop offset="1" stop-color="#0093f3"/>
+            </linearGradient>
+          </defs>
+          <g fill="url(#logo-g)">
+            <rect class="b b0" x="53" y="25" width="22" height="8" rx="4"/>
+            <rect class="b b1" x="46" y="39" width="36" height="8" rx="4"/>
+            <rect class="b b2" x="39" y="53" width="50" height="8" rx="4"/>
+            <rect class="b b3" x="32" y="67" width="64" height="8" rx="4"/>
+            <rect class="b b4" x="25" y="81" width="78" height="8" rx="4"/>
+            <rect class="b b5" x="17" y="95" width="94" height="8" rx="4"/>
+          </g>
+        </svg>
+        <div>
+          <p class="kicker">Line-length formatter</p>
+          <h1>The block becomes <em>a pyramid.</em></h1>
+          <p class="lede">Pyramid Sort reorders a block by trimmed line length. Imports, JSX attributes, types, objects, and CSS. The same order on save, in the CLI, and in whatever agent just edited the file.</p>
+          <div class="actions">
+            <a class="btn btn-solid" href="https://marketplace.visualstudio.com/items?itemName=INVEON-Development.pyramid-sort">Install the extension</a>
+            <a class="btn btn-ghost" href="examples.html">More examples</a>
+          </div>
         </div>
       </div>
       <div class="pair">
