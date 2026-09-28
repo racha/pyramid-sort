@@ -13,7 +13,7 @@ const BARS = [
 
 const EASE = [0.65, 0, 0.35, 1] as const;
 
-/** `loop` sorts forever. `hover` sorts only while a motion ancestor is in its `shuffle` variant. */
+/** `loop` sorts forever. `hover` goes jagged while a motion ancestor is in `shuffle`, and sorts back on `rest`. */
 export function Logo({ mode, className }: { mode: 'loop' | 'hover'; className?: string }) {
   const id = useId();
   return (
@@ -40,11 +40,8 @@ export function Logo({ mode, className }: { mode: 'loop' | 'hover'; className?: 
             <motion.g
               key={b.w}
               variants={{
-                rest: { y: 0, transition: { duration: 0.4, ease: EASE } },
-                shuffle: {
-                  y: [0, b.dy, b.dy, 0],
-                  transition: { duration: 1.6, times: [0, 0.35, 0.5, 1], ease: EASE, repeat: Infinity },
-                },
+                rest: { y: 0, transition: { duration: 0.6, ease: EASE } },
+                shuffle: { y: b.dy, transition: { duration: 0.45, ease: EASE } },
               }}
             >
               <rect x={b.x} y={b.y} width={b.w} height="8" rx="4" />
